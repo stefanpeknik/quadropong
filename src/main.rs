@@ -5,35 +5,12 @@ use axum::{
 use log::info;
 use pong_server::{
     api::{create_game, get_game_by_id, get_games, join_game},
-    models::{ClientInput, ClientInputType},
+    game_loop::process_input,
+    models::{ClientInput, ClientInputWithAddr},
     GameRooms,
 };
-use std::{
-    net::{SocketAddr, UdpSocket},
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::VecDeque, net::UdpSocket, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
-use uuid::Uuid;
-
-async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, addr: SocketAddr) {
-    let game_id = Uuid::parse_str(&input.game_id).unwrap();
-    let player_id = Uuid::parse_str(&input.player_id).unwrap();
-
-    let mut game_rooms = lobbies.lock().await;
-
-    let game = game_rooms.lobbies.get_mut(&game_id).unwrap();
-    let player = game.get_player_mut(&player_id).unwrap();
-
-    match input.action {
-        ClientInputType::JoinGame => {
-            player.addr = Some(addr);
-        }
-        _ => {
-            println!("Invalid action");
-        }
-    }
-}
 
 #[tokio::main]
 async fn main() {
@@ -49,9 +26,13 @@ async fn main() {
 
     // Clone for the receiver task
     let socket_recv = socket.clone();
-    let game_rooms_recv = game_rooms.clone();
 
     let game_rooms_send = game_rooms.clone();
+
+    let message_queue: Arc<Mutex<VecDeque<ClientInputWithAddr>>> =
+        Arc::new(Mutex::new(VecDeque::new()));
+
+    let message_queue_recv = message_queue.clone();
 
     // Spawn UDP receiver task
     tokio::spawn(async move {
@@ -60,33 +41,58 @@ async fn main() {
             match socket_recv.recv_from(&mut buf) {
                 Ok((size, addr)) => {
                     // Try msgpack deserialization as fallback
-                    if let Ok(input) = rmp_serde::from_slice::<ClientInput>(&buf[..size]) {
-                        println!(
-                            "Received msgpack input for game: {:?} from {}",
-                            input.action, addr
-                        );
-                        process_input(input, game_rooms_recv.clone(), addr).await;
-                    } else {
-                        println!("Error deserializing input - size: {}", size);
+                    match rmp_serde::from_slice::<ClientInput>(&buf[..size]) {
+                        Ok(input) => {
+                            let input = ClientInputWithAddr { addr, input };
+                            message_queue_recv.lock().await.push_back(input);
+                        }
+                        Err(e) => {
+                            println!("Error deserializing input from {}: {}", addr, e);
+                        }
                     }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // No data available, continue
-                    tokio::time::sleep(Duration::from_millis(1)).await;
+                    tokio::task::yield_now().await;
                 }
                 Err(e) => eprintln!("Error receiving UDP packet: {}", e),
             }
         }
     });
 
+    let game_rooms_loop = game_rooms.clone();
+    let message_queue_loop = message_queue.clone();
     tokio::spawn(async move {
-        // Game state broadcast loop
-        let mut interval = time::interval(Duration::from_millis(1000 / 2));
+        let mut interval = time::interval(Duration::from_millis(1000 / 30)); // 60 Hz
         loop {
             interval.tick().await;
-            println!("Sending the game state");
-            let rooms = game_rooms_send.lock().await;
-            for game in rooms.lobbies.values() {
+
+            // Process all messages in the queue
+            let mut queue = message_queue_loop.lock().await;
+            println!("Processing {} messages", queue.len());
+            while let Some(input) = queue.pop_front() {
+                process_input(input.input, game_rooms_loop.clone(), input.addr).await;
+            }
+
+            let mut rooms = game_rooms_loop.lock().await;
+            for game in rooms.lobbies.values_mut() {
+                game.update_ball_position();
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        // Game state broadcast loop
+        let mut interval = time::interval(Duration::from_millis(1000 / 30));
+        loop {
+            interval.tick().await;
+
+            let games = {
+                let rooms = game_rooms_send.lock().await;
+                rooms.lobbies.values().cloned().collect::<Vec<_>>()
+            };
+
+            // Broadcast the game state to all players
+            for game in games {
                 let serialized = rmp_serde::to_vec(&game).unwrap();
 
                 for player in game.players.values() {

@@ -20,7 +20,7 @@ pub async fn join_game(
     Path(game_id): Path<String>,
     Json(payload): Json<JoinGameRequest>,
 ) -> Result<Json<Player>, StatusCode> {
-    let game_uuid = Uuid::parse_str(&game_id).map_err(|e| StatusCode::BAD_REQUEST)?;
+    let game_uuid = Uuid::parse_str(&game_id).map_err(|_e| StatusCode::BAD_REQUEST)?;
 
     let mut game_rooms = app_state.lock().await;
 
@@ -35,11 +35,18 @@ pub async fn join_game(
         format!("player_{}", player_number)
     });
 
-    let player = Player::new(player_name);
+    let player_positions = game.assign_position();
+
+    let mut player = Player::new(player_name);
+
+    if let Some(position) = player_positions {
+        player.position = Some(position);
+    }
+
     let player_copy = player.clone();
 
     game.add_player(player)
-        .map_err(|e| StatusCode::INTERNAL_SERVER_ERROR)
+        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)
         .map(|_| Json(player_copy))
 }
 

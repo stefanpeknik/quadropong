@@ -3,12 +3,23 @@ use std::net::SocketAddr;
 use serde::Serialize;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub enum PlayerPosition {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
 #[derive(Serialize, Clone)]
 pub struct Player {
     pub id: Uuid,
     pub name: String,
     pub score: u32,
     pub addr: Option<SocketAddr>,
+    pub position: Option<PlayerPosition>,
+    pub paddle_position: f32, // Paddle's position along its axis (-10.0 to 10.0)
+    pub paddle_delta: f32,
 }
 
 impl Player {
@@ -18,6 +29,9 @@ impl Player {
             name: name,
             score: 0,
             addr: None,
+            position: None,
+            paddle_delta: 0.35,
+            paddle_position: 0.0,
         }
     }
 

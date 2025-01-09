@@ -1,5 +1,6 @@
 pub mod api;
 pub mod error;
+pub mod game_loop;
 pub mod models;
 
 // Re-export common types
