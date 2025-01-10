@@ -1,13 +1,51 @@
+import json
 import pygame
 import socket
 import msgpack
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
-import time
+import requests
 
-game_id_str = "f77231d4-9393-441f-8084-1c71951c355d"
-player_id = "d0694a77-80ce-4cbc-b351-8fc3d4bf9e34"
+# Constants for the server URLs
+SERVER_URL = "http://localhost:3000"
+CREATE_GAME_URL = f"{SERVER_URL}/game"
+JOIN_GAME_URL = f"{SERVER_URL}/game/{{game_id}}/join"
+
+
+# Function to create a new game and return the game ID
+def create_game() -> str:
+    response = requests.post(CREATE_GAME_URL)
+    if response.status_code == 200:
+        game_data = response.json()
+        return game_data["id"]
+    else:
+        raise Exception(f"Failed to create game: {response.status_code}")
+
+
+# Function to join a game and return the player ID
+def join_game(game_id: str) -> str:
+    headers = {
+        "Content-Type": "application/json",  # Set the Content-Type header to JSON
+    }
+    response = requests.post(
+        JOIN_GAME_URL.format(game_id=game_id), headers=headers, json={}
+    )
+    if response.status_code == 200:
+        player_data = response.json()
+        return player_data["id"]
+    else:
+        raise Exception(
+            f"Failed to join game: {response.status_code}, Response: {response.text}"
+        )
+
+
+# Automatically fetch game_id and player_id
+game_id_str = create_game()
+player_id = join_game(game_id_str)
+
+print(f"Game ID: {game_id_str}")
+print(f"Player ID: {player_id}")
 
 
 class Direction(str, Enum):
@@ -89,12 +127,10 @@ def handle_continuous_input(
     """Handle continuous key press state"""
     direction = None
 
-    if keys[pygame.K_UP] or keys[pygame.K_LEFT]:
+    if keys[pygame.K_UP] or keys[pygame.K_RIGHT]:
         direction = Direction.Positive
-        print("Positive direction (Up/Left)")
-    elif keys[pygame.K_DOWN] or keys[pygame.K_RIGHT]:
+    elif keys[pygame.K_DOWN] or keys[pygame.K_LEFT]:
         direction = Direction.Negative
-        print("Negative direction (Down/Right)")
 
     if direction:
         client_input = ClientInput(
@@ -127,7 +163,6 @@ clock = pygame.time.Clock()
 
 def serialize_client_input(client_input: ClientInput) -> bytes:
     data = client_input.to_dict()
-    print("Serialized data:", data)  # Debugging
     return msgpack.packb(data, use_bin_type=True)
 
 
@@ -137,41 +172,52 @@ def draw_paddle(
     player_name: str,
     score: int,
     is_current_player: bool,
+    paddle_width: float,
 ):
-    """Draw a paddle and player info"""
-    x, y = 0, 0
+    paddle_length = abs(paddle_width) * (WINDOW_SIZE / 20)  # Scale to screen size
+    PADDLE_THICKNESS = 10  # Constant thickness for all paddles
+    EDGE_SPACING = 1.5 / 20 * WINDOW_SIZE  # Space between paddle and screen edge
 
-    # Clamp paddle position to valid range
-    paddle_pos = max(-10, min(10, paddle_pos))
-
-    # Use server-provided paddle position directly
+    # Calculate the paddle's screen position
     if position == "Top":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE - PADDLE_LENGTH) / 20
-        x = int(paddle_screen_pos + PADDLE_LENGTH / 2)
-        y = PADDLE_WIDTH / 2
+        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
+        x = paddle_screen_pos
+        y = EDGE_SPACING
         rect = pygame.Rect(
-            x - PADDLE_LENGTH / 2, y - PADDLE_WIDTH / 2, PADDLE_LENGTH, PADDLE_WIDTH
+            int(x - paddle_length / 2),
+            int(y - PADDLE_THICKNESS / 2),
+            int(paddle_length),
+            PADDLE_THICKNESS,
         )
     elif position == "Bottom":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE - PADDLE_LENGTH) / 20
-        x = int(paddle_screen_pos + PADDLE_LENGTH / 2)
-        y = WINDOW_SIZE - PADDLE_WIDTH / 2
+        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
+        x = paddle_screen_pos
+        y = WINDOW_SIZE - EDGE_SPACING
         rect = pygame.Rect(
-            x - PADDLE_LENGTH / 2, y - PADDLE_WIDTH / 2, PADDLE_LENGTH, PADDLE_WIDTH
+            int(x - paddle_length / 2),
+            int(y - PADDLE_THICKNESS / 2),
+            int(paddle_length),
+            PADDLE_THICKNESS,
         )
     elif position == "Left":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE - PADDLE_LENGTH) / 20
-        x = PADDLE_WIDTH / 2
-        y = int(paddle_screen_pos + PADDLE_LENGTH / 2)
+        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
+        x = EDGE_SPACING
+        y = paddle_screen_pos
         rect = pygame.Rect(
-            x - PADDLE_WIDTH / 2, y - PADDLE_LENGTH / 2, PADDLE_WIDTH, PADDLE_LENGTH
+            int(x - PADDLE_THICKNESS / 2),
+            int(y - paddle_length / 2),
+            PADDLE_THICKNESS,
+            int(paddle_length),
         )
     elif position == "Right":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE - PADDLE_LENGTH) / 20
-        x = WINDOW_SIZE - PADDLE_WIDTH / 2
-        y = int(paddle_screen_pos + PADDLE_LENGTH / 2)
+        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
+        x = WINDOW_SIZE - EDGE_SPACING
+        y = paddle_screen_pos
         rect = pygame.Rect(
-            x - PADDLE_WIDTH / 2, y - PADDLE_LENGTH / 2, PADDLE_WIDTH, PADDLE_LENGTH
+            int(x - PADDLE_THICKNESS / 2),
+            int(y - paddle_length / 2),
+            PADDLE_THICKNESS,
+            int(paddle_length),
         )
 
     color = MY_PADDLE_COLOR if is_current_player else PADDLE_COLOR
@@ -181,15 +227,18 @@ def draw_paddle(
     font = pygame.font.Font(None, 24)
     text = font.render(f"{player_name}: {score}", True, TEXT_COLOR)
 
-    # Position text based on paddle location
+    # Adjust text positions to account for edge spacing
     if position == "Top":
-        text_pos = (x - text.get_width() / 2, y + 20)
+        text_pos = (int(x - text.get_width() / 2), int(y + PADDLE_THICKNESS + 10))
     elif position == "Bottom":
-        text_pos = (x - text.get_width() / 2, y - 40)
+        text_pos = (int(x - text.get_width() / 2), int(y - PADDLE_THICKNESS - 30))
     elif position == "Left":
-        text_pos = (x + 20, y - text.get_height() / 2)
+        text_pos = (int(x + PADDLE_THICKNESS + 10), int(y - text.get_height() / 2))
     else:  # Right
-        text_pos = (x - text.get_width() - 20, y - text.get_height() / 2)
+        text_pos = (
+            int(x - text.get_width() - PADDLE_THICKNESS - 10),
+            int(y - text.get_height() / 2),
+        )
 
     screen.blit(text, text_pos)
 
@@ -231,12 +280,7 @@ def main():
     print(f"Joining game {game_id_str} as player {player_id}")
 
     running = True
-    last_time = time.time()
     while running:
-        current_time = time.time()
-        delta_time = current_time - last_time
-        last_time = current_time
-        print(f"Frame time: {delta_time:.4f} seconds")
 
         # Handle pygame events
         for event in pygame.event.get():
@@ -284,10 +328,21 @@ def main():
 
         # Draw paddles using current game state
         for player_id_key, player_data in game_state.players.items():
-            id, name, score, address, position, paddle_pos, paddle_delta = player_data
+            (
+                id,
+                name,
+                score,
+                address,
+                position,
+                paddle_pos,
+                paddle_delta,
+                paddle_width,
+            ) = player_data
             if position:
                 is_current_player = player_id_key == id
-                draw_paddle(position, paddle_pos, name, score, is_current_player)
+                draw_paddle(
+                    position, paddle_pos, name, score, is_current_player, paddle_width
+                )
 
         # Draw ball
         if game_state.ball:
@@ -295,7 +350,7 @@ def main():
 
         # Update display
         pygame.display.flip()
-        clock.tick(60)  # Cap frame rate at 120 FPS
+        clock.tick(120)  # Cap frame rate at 120 FPS
 
     # Clean up
     print("\nClosing connection...")

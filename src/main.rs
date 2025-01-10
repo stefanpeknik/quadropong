@@ -62,13 +62,12 @@ async fn main() {
     let game_rooms_loop = game_rooms.clone();
     let message_queue_loop = message_queue.clone();
     tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_millis(1000 / 30)); // 60 Hz
+        let mut interval = time::interval(Duration::from_millis(1000 / 30));
         loop {
             interval.tick().await;
 
             // Process all messages in the queue
             let mut queue = message_queue_loop.lock().await;
-            println!("Processing {} messages", queue.len());
             while let Some(input) = queue.pop_front() {
                 process_input(input.input, game_rooms_loop.clone(), input.addr).await;
             }
