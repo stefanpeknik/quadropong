@@ -170,7 +170,6 @@ impl Game {
 
     pub fn check_collision(&mut self) {
         if let Some(ball) = &mut self.ball {
-            // Use `iter_mut` to get mutable access to players
             for player in self.players.values_mut() {
                 match player.position {
                     Some(PlayerPosition::Top) => {
@@ -182,36 +181,19 @@ impl Game {
 
                         // Check if the ball will collide with the paddle
                         if next_ball_y < paddle_y
-                            && ball.position.x >= paddle_start
-                            && ball.position.x <= paddle_end
+                            && (ball.position.x + ball.radius) >= paddle_start
+                            && (ball.position.x - ball.radius) <= paddle_end
                         {
-                            let paddle_vertical_distance = (paddle_y - ball.position.y).abs();
-                            // let paddle_hit_x = ball.position.x
-                            //     + (ball.velocity.x * (paddle_vertical_distance / ball.velocity.y));
                             let hit_offset = (ball.position.x - player.paddle_position)
                                 / (player.paddle_width / 2.0);
 
-                            println!(
-                                "Paddle: {} | Ball: ({}, {}) ({}, {}) | Ver dist: {} | Hit offset: {}",
-                                player.paddle_position,
-                                ball.position.x,
-                                ball.position.y,
-                                ball.velocity.x,
-                                ball.velocity.y,
-                                paddle_vertical_distance,
-                                //paddle_hit_x,
-                                hit_offset
-                            );
-
-                            let angle = hit_offset * MAX_ANGLE;
+                            let angle = (3.0 * PI / 2.0) + hit_offset * MAX_ANGLE;
 
                             // Update the ball's velocity based on the reflection angle
                             ball.velocity.x = BALL_SPEED * angle.cos();
                             ball.velocity.y = -BALL_SPEED * angle.sin();
 
                             ball.position.y = paddle_y + ball.radius;
-
-                            println!("Ball hits paddle");
 
                             // Increment the player's score
                             player.score += 1;
