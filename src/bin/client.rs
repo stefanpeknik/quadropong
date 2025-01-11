@@ -46,7 +46,25 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 continue;
             }
             match app.current_screen {
-                CurrentScreen::Main => match key.code {
+                CurrentScreen::Menu => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::OfflineCreate => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::OnlineCreate => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::Settings => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
                     }

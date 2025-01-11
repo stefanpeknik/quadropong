@@ -1,5 +1,8 @@
 pub enum CurrentScreen {
-    Main,
+    Menu,
+    OnlineCreate,
+    OfflineCreate,
+    Settings,
 }
 
 pub enum CurrentlyEditing {
@@ -14,7 +17,7 @@ pub struct App {
 impl App {
     pub fn new() -> App {
         App {
-            current_screen: CurrentScreen::Main,
+            current_screen: CurrentScreen::Menu,
         }
     }
 }
