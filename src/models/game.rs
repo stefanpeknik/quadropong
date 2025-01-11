@@ -12,7 +12,7 @@ use super::player::PlayerPosition;
 use super::Player;
 
 const MAX_ANGLE: f32 = PI / 4.0; // Maximum reflection angle (45 degrees in radians)
-const BALL_SPEED: f32 = 0.5; // Constant ball speed
+const BALL_SPEED: f32 = 0.3; // Constant ball speed
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum GameState {
@@ -148,16 +148,16 @@ impl Game {
             ball.position.x += ball.velocity.x;
             ball.position.y += ball.velocity.y;
 
-            if ball.position.x - ball.radius < -10.0 {
-                ball.position.x = -10.0 + ball.radius;
+            if ball.position.x - ball.radius < 0.0 {
+                ball.position.x = 0.0 + ball.radius;
                 ball.velocity.x *= -1.0;
             } else if ball.position.x + ball.radius > 10.0 {
                 ball.position.x = 10.0 - ball.radius;
                 ball.velocity.x *= -1.0;
             }
 
-            if ball.position.y - ball.radius < -10.0 {
-                ball.position.y = -10.0 + ball.radius;
+            if ball.position.y - ball.radius < 0.0 {
+                ball.position.y = 0.0 + ball.radius;
                 ball.velocity.y *= -1.0;
             } else if ball.position.y + ball.radius > 10.0 {
                 ball.position.y = 10.0 - ball.radius;
@@ -175,7 +175,7 @@ impl Game {
                     Some(PlayerPosition::Top) => {
                         let paddle_start = player.paddle_position - player.paddle_width / 2.0;
                         let paddle_end = player.paddle_position + player.paddle_width / 2.0;
-                        let paddle_y = -8.5;
+                        let paddle_y = 0.5;
 
                         let next_ball_y = ball.position.y + ball.velocity.y;
 

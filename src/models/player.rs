@@ -18,7 +18,7 @@ pub struct Player {
     pub score: u32,
     pub addr: Option<SocketAddr>,
     pub position: Option<PlayerPosition>,
-    pub paddle_position: f32, // Paddle's position along its axis (-10.0 to 10.0)
+    pub paddle_position: f32,
     pub paddle_delta: f32,
     pub paddle_width: f32,
 }
@@ -31,9 +31,9 @@ impl Player {
             score: 0,
             addr: None,
             position: None,
-            paddle_delta: 0.35,
+            paddle_delta: 0.2,
             paddle_position: 0.0,
-            paddle_width: 2.0,
+            paddle_width: 1.0,
         }
     }
 

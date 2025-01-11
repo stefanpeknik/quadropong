@@ -26,7 +26,7 @@ def create_game() -> str:
 # Function to join a game and return the player ID
 def join_game(game_id: str) -> str:
     headers = {
-        "Content-Type": "application/json",  # Set the Content-Type header to JSON
+        "Content-Type": "application/json",
     }
     response = requests.post(
         JOIN_GAME_URL.format(game_id=game_id), headers=headers, json={}
@@ -166,6 +166,13 @@ def serialize_client_input(client_input: ClientInput) -> bytes:
     return msgpack.packb(data, use_bin_type=True)
 
 
+def game_to_screen_coords(x: float, y: float) -> Tuple[int, int]:
+    """Convert game coordinates (0-10) to screen coordinates (0-WINDOW_SIZE)"""
+    screen_x = int(x * WINDOW_SIZE / 10)
+    screen_y = int(y * WINDOW_SIZE / 10)
+    return screen_x, screen_y
+
+
 def draw_paddle(
     position: str,
     paddle_pos: float,
@@ -174,14 +181,13 @@ def draw_paddle(
     is_current_player: bool,
     paddle_width: float,
 ):
-    paddle_length = abs(paddle_width) * (WINDOW_SIZE / 20)  # Scale to screen size
+    paddle_length = abs(paddle_width) * (WINDOW_SIZE / 10)  # Scale to screen size
     PADDLE_THICKNESS = 10  # Constant thickness for all paddles
-    EDGE_SPACING = 1.5 / 20 * WINDOW_SIZE  # Space between paddle and screen edge
+    EDGE_SPACING = 0.5 * (WINDOW_SIZE / 10)  # Space between paddle and screen edge
 
-    # Calculate the paddle's screen position
+    # Calculate the paddle's screen position based on 0-10 range
     if position == "Top":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
-        x = paddle_screen_pos
+        x = paddle_pos * WINDOW_SIZE / 10
         y = EDGE_SPACING
         rect = pygame.Rect(
             int(x - paddle_length / 2),
@@ -190,8 +196,7 @@ def draw_paddle(
             PADDLE_THICKNESS,
         )
     elif position == "Bottom":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
-        x = paddle_screen_pos
+        x = paddle_pos * WINDOW_SIZE / 10
         y = WINDOW_SIZE - EDGE_SPACING
         rect = pygame.Rect(
             int(x - paddle_length / 2),
@@ -200,9 +205,8 @@ def draw_paddle(
             PADDLE_THICKNESS,
         )
     elif position == "Left":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
         x = EDGE_SPACING
-        y = paddle_screen_pos
+        y = paddle_pos * WINDOW_SIZE / 10
         rect = pygame.Rect(
             int(x - PADDLE_THICKNESS / 2),
             int(y - paddle_length / 2),
@@ -210,9 +214,8 @@ def draw_paddle(
             int(paddle_length),
         )
     elif position == "Right":
-        paddle_screen_pos = (paddle_pos + 10) * (WINDOW_SIZE / 20)
         x = WINDOW_SIZE - EDGE_SPACING
-        y = paddle_screen_pos
+        y = paddle_pos * WINDOW_SIZE / 10
         rect = pygame.Rect(
             int(x - PADDLE_THICKNESS / 2),
             int(y - paddle_length / 2),
@@ -227,7 +230,7 @@ def draw_paddle(
     font = pygame.font.Font(None, 24)
     text = font.render(f"{player_name}: {score}", True, TEXT_COLOR)
 
-    # Adjust text positions to account for edge spacing
+    # Adjust text positions based on paddle position
     if position == "Top":
         text_pos = (int(x - text.get_width() / 2), int(y + PADDLE_THICKNESS + 10))
     elif position == "Bottom":
@@ -245,12 +248,13 @@ def draw_paddle(
 
 def draw_ball(ball: Ball):
     """Draw the ball on the screen"""
-    x = int((ball.position[0] + 10) * (WINDOW_SIZE / 20))
-    y = int((ball.position[1] + 10) * (WINDOW_SIZE / 20))
+    # Convert ball position from game coordinates (0-10) to screen coordinates
+    screen_x, screen_y = game_to_screen_coords(ball.position[0], ball.position[1])
 
-    pygame.draw.circle(
-        screen, BALL_COLOR, (x, y), int(WINDOW_SIZE * (ball.radius / 20))
-    )
+    # Convert radius from game units to screen pixels
+    screen_radius = int(ball.radius * WINDOW_SIZE / 10)
+
+    pygame.draw.circle(screen, BALL_COLOR, (screen_x, screen_y), screen_radius)
 
 
 def create_udp_socket() -> socket.socket:
@@ -281,7 +285,6 @@ def main():
 
     running = True
     while running:
-
         # Handle pygame events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -302,24 +305,21 @@ def main():
             # Receive game state
             data, addr = sock.recvfrom(1024)
             unpacked = msgpack.unpackb(data, raw=False)
-            # print("Received data:", unpacked)  # Debugging
 
             if isinstance(unpacked, list) and len(unpacked) == 7:
                 game_id, players_dict, state, max_players, created_at, _, ball_data = (
                     unpacked
                 )
 
-                # Unpack ball data
+                # Create Ball object directly from the received coordinates (already in 0-10 range)
                 if isinstance(ball_data, list) and len(ball_data) == 3:
                     ball_position, ball_velocity, ball_radius = ball_data
                     ball = Ball(
-                        position=(ball_position[0], ball_position[1]),  # (x, y)
-                        velocity=(ball_velocity[0], ball_velocity[1]),  # (vx, vy)
+                        position=(ball_position[0], ball_position[1]),
+                        velocity=(ball_velocity[0], ball_velocity[1]),
                         radius=ball_radius,
                     )
                     game_state.update(players_dict, ball)
-                else:
-                    print("Invalid ball data format:", ball_data)
 
         except socket.timeout:
             pass  # No data received
@@ -341,7 +341,12 @@ def main():
             if position:
                 is_current_player = player_id_key == id
                 draw_paddle(
-                    position, paddle_pos, name, score, is_current_player, paddle_width
+                    position,
+                    paddle_pos,  # Use paddle_pos directly since it's already in 0-10 range
+                    name,
+                    score,
+                    is_current_player,
+                    paddle_width,
                 )
 
         # Draw ball

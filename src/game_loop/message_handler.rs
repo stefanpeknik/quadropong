@@ -47,9 +47,10 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
                 Direction::Negative => -player.paddle_delta,
             };
             player.paddle_position = (player.paddle_position + delta).clamp(
-                -10.0 + (player.paddle_width / 2.0),
+                0.0 + (player.paddle_width / 2.0),
                 10.0 - (player.paddle_width / 2.0),
             );
+            println!("Paddle position: {}", player.paddle_position);
         }
         _ => {
             println!("Invalid action");

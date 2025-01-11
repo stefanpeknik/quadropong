@@ -17,8 +17,8 @@ impl Ball {
     pub fn new() -> Self {
         Self {
             position: Vec2 { x: 0.0, y: 0.0 },
-            velocity: Vec2 { x: 0.3, y: 0.4 },
-            radius: 0.25,
+            velocity: Vec2 { x: 0.15, y: 0.2 },
+            radius: 0.125,
         }
     }
 }
