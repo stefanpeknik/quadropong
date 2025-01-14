@@ -1,8 +1,33 @@
+#[derive(Debug, Clone, Copy)]
+pub enum MenuOptions {
+    Online,
+    Training,
+    Settings
+}
+
+impl MenuOptions {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Online => Self::Training,
+            Self::Training => Self::Settings,
+            Self::Settings => Self::Online,
+        }
+    }
+
+    pub fn previous(self) -> Self {
+        match self {
+            Self::Online => Self::Settings,
+            Self::Training => Self::Online,
+            Self::Settings => Self::Training,
+        }
+    }
+}
+
 pub enum CurrentScreen {
-    Menu,
-    OnlineCreate,
-    OfflineCreate,
-    Settings,
+    MenuScreen(MenuOptions),
+    OnlineCreateScreen,
+    TrainingCreateScreen,
+    SettingsScreen,
 }
 
 pub enum CurrentlyEditing {
@@ -17,7 +42,7 @@ pub struct App {
 impl App {
     pub fn new() -> App {
         App {
-            current_screen: CurrentScreen::Menu,
+            current_screen: CurrentScreen::MenuScreen(MenuOptions::Online),
         }
     }
 }

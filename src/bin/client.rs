@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<bool> {
+
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -45,28 +46,51 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             if key.kind == event::KeyEventKind::Release {
                 continue;
             }
-            match app.current_screen {
-                CurrentScreen::Menu => match key.code {
+            match &mut app.current_screen {
+                CurrentScreen::MenuScreen(menu_state) => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
+                    },
+                    KeyCode::Down => {
+                        *menu_state = menu_state.next();
+                    },
+                    KeyCode::Up => {
+                        *menu_state = menu_state.previous();
+                    },
+                    KeyCode::Enter => {
+                        terminal.current_buffer_mut();
+                        match menu_state {
+                            MenuOptions::Online => app.current_screen = CurrentScreen::OnlineCreateScreen,
+                            MenuOptions::Training => app.current_screen = CurrentScreen::TrainingCreateScreen,
+                            MenuOptions::Settings => app.current_screen = CurrentScreen::SettingsScreen,
+                        }
+                    }                    
+                    _ => {}
+                },
+                CurrentScreen::OnlineCreateScreen => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    },
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online);
                     }
                     _ => {}
                 },
-                CurrentScreen::OfflineCreate => match key.code {
+                CurrentScreen::TrainingCreateScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
+                    },
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Training);
                     }
                     _ => {}
                 },
-                CurrentScreen::OnlineCreate => match key.code {
+                CurrentScreen::SettingsScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
-                    }
-                    _ => {}
-                },
-                CurrentScreen::Settings => match key.code {
-                    KeyCode::Char('q') => {
-                        return Ok(true);
+                    },
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Settings);
                     }
                     _ => {}
                 },
