@@ -62,7 +62,7 @@ async fn main() {
     let game_rooms_loop = game_rooms.clone();
     let message_queue_loop = message_queue.clone();
     tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_millis(1000 / 30));
+        let mut interval = time::interval(Duration::from_millis(1000 / 60));
         loop {
             interval.tick().await;
 
@@ -81,7 +81,7 @@ async fn main() {
 
     tokio::spawn(async move {
         // Game state broadcast loop
-        let mut interval = time::interval(Duration::from_millis(1000 / 30));
+        let mut interval = time::interval(Duration::from_millis(1000 / 60));
         loop {
             interval.tick().await;
 

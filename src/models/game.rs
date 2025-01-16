@@ -12,7 +12,10 @@ use super::player::PlayerPosition;
 use super::Player;
 
 const MAX_ANGLE: f32 = PI / 4.0; // Maximum reflection angle (45 degrees in radians)
-const BALL_SPEED: f32 = 0.3; // Constant ball speed
+const BALL_SPEED: f32 = 0.15; // Constant ball speed
+const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
+const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
+const GAME_SIZE: f32 = 10.0; // Since it's a square
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum GameState {
@@ -168,14 +171,27 @@ impl Game {
         self.check_collision();
     }
 
+    pub fn is_ball_in_safe_zone(ball: &Ball, paddle_padding: f32) -> bool {
+        let safe_distance = paddle_padding * SAFE_ZONE_MARGIN;
+
+        ball.position.x > safe_distance
+            && ball.position.x < (GAME_SIZE - safe_distance)
+            && ball.position.y > safe_distance
+            && ball.position.y < (GAME_SIZE - safe_distance)
+    }
+
     pub fn check_collision(&mut self) {
         if let Some(ball) = &mut self.ball {
+            // check if we need to check collision
+            if Game::is_ball_in_safe_zone(ball, PADDLE_PADDING) {
+                return;
+            }
             for player in self.players.values_mut() {
                 match player.position {
                     Some(PlayerPosition::Top) => {
                         let paddle_start = player.paddle_position - player.paddle_width / 2.0;
                         let paddle_end = player.paddle_position + player.paddle_width / 2.0;
-                        let paddle_y = 0.5;
+                        let paddle_y = PADDLE_PADDING;
 
                         let next_ball_y = ball.position.y + ball.velocity.y;
 
@@ -184,8 +200,9 @@ impl Game {
                             && (ball.position.x + ball.radius) >= paddle_start
                             && (ball.position.x - ball.radius) <= paddle_end
                         {
-                            let hit_offset = (ball.position.x - player.paddle_position)
-                                / (player.paddle_width / 2.0);
+                            let hit_offset = ((ball.position.x - player.paddle_position)
+                                / (player.paddle_width / 2.0))
+                                .clamp(-1.0, 1.0);
 
                             let angle = (3.0 * PI / 2.0) + hit_offset * MAX_ANGLE;
 
@@ -194,6 +211,33 @@ impl Game {
                             ball.velocity.y = -BALL_SPEED * angle.sin();
 
                             ball.position.y = paddle_y + ball.radius;
+
+                            // Increment the player's score
+                            player.score += 1;
+                        }
+                    }
+                    Some(PlayerPosition::Bottom) => {
+                        let paddle_start = player.paddle_position - player.paddle_width / 2.0;
+                        let paddle_end = player.paddle_position + player.paddle_width / 2.0;
+                        let paddle_y = GAME_SIZE - PADDLE_PADDING;
+
+                        let next_ball_y = ball.position.y + ball.velocity.y;
+
+                        // Check if the ball will collide with the paddle
+                        if next_ball_y > paddle_y
+                            && (ball.position.x + ball.radius) >= paddle_start
+                            && (ball.position.x - ball.radius) <= paddle_end
+                        {
+                            let hit_offset = -((ball.position.x - player.paddle_position)
+                                / (player.paddle_width / 2.0))
+                                .clamp(-1.0, 1.0);
+
+                            let angle = (PI / 2.0) + hit_offset * MAX_ANGLE;
+
+                            ball.velocity.x = BALL_SPEED * angle.cos();
+                            ball.velocity.y = -BALL_SPEED * angle.sin();
+
+                            ball.position.y = paddle_y - ball.radius;
 
                             // Increment the player's score
                             player.score += 1;
