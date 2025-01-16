@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let mut app = App::new();
-    let res = run_app(&mut terminal, &mut app);
+    run_app(&mut terminal, &mut app)?;
 
     // restore terminal
     disable_raw_mode()?;
@@ -38,7 +38,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<bool> {
-
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -48,38 +47,80 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             }
             match &mut app.current_screen {
                 CurrentScreen::MenuScreen(menu_state) => match key.code {
-                    KeyCode::Char('q') => {
-                        return Ok(true);
-                    },
                     KeyCode::Down => {
                         *menu_state = menu_state.next();
-                    },
+                    }
                     KeyCode::Up => {
                         *menu_state = menu_state.previous();
-                    },
+                    }
                     KeyCode::Enter => {
-                        terminal.current_buffer_mut();
+                        // terminal.current_buffer_mut();
                         match menu_state {
-                            MenuOptions::Online => app.current_screen = CurrentScreen::OnlineCreateScreen,
-                            MenuOptions::Training => app.current_screen = CurrentScreen::TrainingCreateScreen,
-                            MenuOptions::Settings => app.current_screen = CurrentScreen::SettingsScreen,
+                            MenuOptions::Online => {
+                                app.current_screen =
+                                    CurrentScreen::OnlineScreen(OnlineOptions::Create)
+                            }
+                            MenuOptions::Training => {
+                                app.current_screen = CurrentScreen::TrainingCreateScreen
+                            }
+                            MenuOptions::Settings => {
+                                app.current_screen = CurrentScreen::SettingsScreen
+                            }
                         }
-                    }                    
+                    }
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::OnlineScreen(online_state) => match key.code {
+                    KeyCode::Down => {
+                        *online_state = online_state.next();
+                    }
+                    KeyCode::Up => {
+                        *online_state = online_state.previous();
+                    }
+                    KeyCode::Enter => {
+                        // terminal.current_buffer_mut();
+                        match online_state {
+                            OnlineOptions::Create => {
+                                app.current_screen = CurrentScreen::OnlineCreateScreen
+                            }
+                            OnlineOptions::Join => {
+                                app.current_screen = CurrentScreen::OnlineJoinScreen
+                            }
+                        }
+                    }
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online);
+                    }
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
                     _ => {}
                 },
                 CurrentScreen::OnlineCreateScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
-                    },
+                    }
                     KeyCode::Esc => {
-                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online);
+                        app.current_screen = CurrentScreen::OnlineScreen(OnlineOptions::Create);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::OnlineJoinScreen => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(true);
+                    }
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::OnlineScreen(OnlineOptions::Join);
                     }
                     _ => {}
                 },
                 CurrentScreen::TrainingCreateScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
-                    },
+                    }
                     KeyCode::Esc => {
                         app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Training);
                     }
@@ -88,7 +129,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 CurrentScreen::SettingsScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
-                    },
+                    }
                     KeyCode::Esc => {
                         app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Settings);
                     }

@@ -2,7 +2,7 @@
 pub enum MenuOptions {
     Online,
     Training,
-    Settings
+    Settings,
 }
 
 impl MenuOptions {
@@ -23,9 +23,30 @@ impl MenuOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum OnlineOptions {
+    Create,
+    Join,
+}
+
+impl OnlineOptions {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Create => Self::Join,
+            Self::Join => Self::Create,
+        }
+    }
+
+    pub fn previous(self) -> Self {
+        self.next()
+    }
+}
+
 pub enum CurrentScreen {
     MenuScreen(MenuOptions),
+    OnlineScreen(OnlineOptions),
     OnlineCreateScreen,
+    OnlineJoinScreen,
     TrainingCreateScreen,
     SettingsScreen,
 }
@@ -44,5 +65,12 @@ impl App {
         App {
             current_screen: CurrentScreen::MenuScreen(MenuOptions::Online),
         }
+    }
+}
+
+// Clippy wanted this
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
     }
 }
