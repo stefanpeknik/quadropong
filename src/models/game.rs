@@ -83,8 +83,8 @@ impl Game {
         let all_positions = [
             PlayerPosition::Top,
             PlayerPosition::Bottom,
-            PlayerPosition::Left,
             PlayerPosition::Right,
+            PlayerPosition::Left,
         ];
 
         all_positions
@@ -214,6 +214,8 @@ impl Game {
 
                             // Increment the player's score
                             player.score += 1;
+
+                            return;
                         }
                     }
                     Some(PlayerPosition::Bottom) => {
@@ -241,9 +243,67 @@ impl Game {
 
                             // Increment the player's score
                             player.score += 1;
+
+                            return;
                         }
                     }
-                    _ => {} // Handle other paddle positions (Left, Right, Bottom) if needed
+                    Some(PlayerPosition::Left) => {
+                        let paddle_start = player.paddle_position - player.paddle_width / 2.0;
+                        let paddle_end = player.paddle_position + player.paddle_width / 2.0;
+                        let paddle_x = PADDLE_PADDING;
+
+                        let next_ball_x = ball.position.x + ball.velocity.x;
+
+                        // Check if the ball will collide with the paddle
+                        if next_ball_x < paddle_x
+                            && (ball.position.y + ball.radius) >= paddle_start
+                            && (ball.position.y - ball.radius) <= paddle_end
+                        {
+                            let hit_offset = -((ball.position.y - player.paddle_position)
+                                / (player.paddle_width / 2.0))
+                                .clamp(-1.0, 1.0);
+
+                            let angle = (PI) + hit_offset * MAX_ANGLE;
+
+                            ball.velocity.x = -BALL_SPEED * angle.cos();
+                            ball.velocity.y = BALL_SPEED * angle.sin();
+
+                            ball.position.x = paddle_x + ball.radius;
+
+                            // Increment the player's score
+                            player.score += 1;
+
+                            return;
+                        }
+                    }
+                    Some(PlayerPosition::Right) => {
+                        let paddle_start = player.paddle_position - player.paddle_width / 2.0;
+                        let paddle_end = player.paddle_position + player.paddle_width / 2.0;
+                        let paddle_x = GAME_SIZE - PADDLE_PADDING;
+
+                        let next_ball_x = ball.position.x + ball.velocity.x;
+
+                        // Check if the ball will collide with the paddle
+                        if next_ball_x > paddle_x
+                            && (ball.position.y + ball.radius) >= paddle_start
+                            && (ball.position.y - ball.radius) <= paddle_end
+                        {
+                            let hit_offset = ((ball.position.y - player.paddle_position)
+                                / (player.paddle_width / 2.0))
+                                .clamp(-1.0, 1.0);
+
+                            let angle = (2.0 * PI) + hit_offset * MAX_ANGLE;
+
+                            ball.velocity.x = -BALL_SPEED * angle.cos();
+                            ball.velocity.y = BALL_SPEED * angle.sin();
+
+                            ball.position.x = paddle_x - ball.radius;
+
+                            player.score += 1;
+                            return;
+                        }
+                    }
+                    None => {}
                 }
             }
         }
