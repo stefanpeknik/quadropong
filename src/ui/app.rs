@@ -28,13 +28,38 @@ impl MenuOptions {
 #[derive(Debug, Clone)]
 pub struct Input {
     pub input: String,
-    char_index: usize,
+    pub char_index: usize,
 }
 
 impl Input {
     pub fn new() -> Self {
         Self { input: String::new(), char_index: 0 }
     }
+
+    pub fn move_left(&mut self) {
+        let cursor_left = self.char_index.saturating_sub(1);
+        self.char_index = cursor_left;
+    }
+
+    pub fn move_right(&mut self) {
+        if self.char_index < self.input.len() {
+            self.char_index += 1;
+        }
+    }
+
+    pub fn insert(&mut self, new_char: char) {
+        self.input.insert(self.char_index, new_char);
+        self.move_right();
+    }
+
+    pub fn delete_char(&mut self) {
+        if self.char_index != 0 {
+            self.char_index -= 1;
+            self.input.remove(self.char_index);
+        }
+    }
+
+
 }
 
 #[derive(Debug, Clone)]

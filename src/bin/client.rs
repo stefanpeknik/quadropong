@@ -78,37 +78,71 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 
                 CurrentScreen::OnlineScreen(online_state) => match key.code {
                     KeyCode::Down => {
-                        *online_state = online_state.clone().next();
+                        if matches!(online_state, OnlineOptions::Create | OnlineOptions::Join) {
+                            *online_state = online_state.clone().next();
+                        }
                     }
                     KeyCode::Up => {
-                        *online_state = online_state.clone().previous();
+                        if matches!(online_state, OnlineOptions::Create | OnlineOptions::Join) {
+                            *online_state = online_state.clone().previous();
+                        }
                     }
                     KeyCode::Enter => {
                         match online_state {
                             OnlineOptions::Create => {
-                                app.current_screen = CurrentScreen::OnlineCreateScreen
+                                app.current_screen = CurrentScreen::OnlineCreateScreen;
                             }
                             OnlineOptions::Join => {
-                                // toggle pop up
+                                // Transition to EnterCode with a new Input instance
                                 *online_state = OnlineOptions::EnterCode(Input::new());
                             }
                             OnlineOptions::EnterCode(input) => {
-                                // TODO try to join lobby
-                                // on success
-                                app.current_screen = CurrentScreen::OnlineLobbyScreen
-                                // on failure
-                                // TODO
+                                // Attempt to join lobby
+                                // TODO: Add lobby joining logic here
+                                // On success:
+                                app.current_screen = CurrentScreen::OnlineLobbyScreen;
+                                // On failure:
+                                // TODO: Handle failure case
                             }
+                        }
+                    }
+                    KeyCode::Left => {
+                        if let OnlineOptions::EnterCode(input) = online_state {
+                            input.move_left();
+                        }
+                    }
+                    KeyCode::Right => {
+                        if let OnlineOptions::EnterCode(input) = online_state {
+                            input.move_right();
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        if let OnlineOptions::EnterCode(input) = online_state {
+                            input.delete_char();
+                        }
+                    }
+                    KeyCode::Tab => {
+                        if let OnlineOptions::EnterCode(input) = online_state {
+                            // TODO insert from clipboard
+                        }
+                    }
+                    KeyCode::Char(char) => {
+                        // Allow character input in EnterCode state
+                        if let OnlineOptions::EnterCode(input) = online_state {
+                            input.insert(char);
+                        } else if char == 'q' {
+                            return Ok(true);
                         }
                     }
                     KeyCode::Esc => {
                         match online_state {
-                            OnlineOptions::EnterCode(_input) => *online_state = OnlineOptions::Join,
-                            _ => app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online),
+                            OnlineOptions::EnterCode(_) => {
+                                *online_state = OnlineOptions::Join;
+                            }
+                            _ => {
+                                app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online);
+                            }
                         }
-                    }
-                    KeyCode::Char('q') => {
-                        return Ok(true);
                     }
                     _ => {}
                 },

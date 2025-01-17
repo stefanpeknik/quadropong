@@ -1,7 +1,7 @@
 use std::{error::Error, vec};
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect, Flex},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Position, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, Text},
@@ -114,18 +114,24 @@ pub fn ui(frame: &mut Frame, app: &App) {
             ])
             .split(middle_area);
 
+            // TODO refactor this, its very ugly
             match online_state {
                 OnlineOptions::EnterCode(input) => {
                     // load input window
                     let title = Line::from(" Enter code ");
+                    let instructions = Line::from(vec![
+                        " Copy from clipboard ".into(),
+                        "<TAB> ".green().bold(),
+                    ]).centered();
                     let block = Block::bordered()
-                        .title(title.left_aligned());
-
+                        .title(title.left_aligned())
+                        .title_bottom(instructions);
                     frame.render_widget(block.clone(), middle_area);
 
-                    let input_paragraph = Paragraph::new(input.input.clone()).block(Block::bordered().title("Input"));
-
-                    frame.render_widget(input_paragraph, middle_split[1]);
+                    let [input_area] = horizontal.areas(middle_split[1]);
+                    let input_paragraph = Paragraph::new(input.input.clone()).block(Block::bordered().title(" Input "));
+                    frame.render_widget(input_paragraph, input_area);
+                    frame.set_cursor_position(Position::new(input_area.x + input.char_index as u16 + 1, input_area.y + 1));
                 },
                 OnlineOptions::Create => {
                     // for each menu_text render its paragraph
