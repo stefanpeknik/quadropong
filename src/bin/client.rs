@@ -15,7 +15,7 @@ use quadropong::ui::{app::*, ui::*};
 fn main() -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
-    let mut stderr = io::stderr(); // This is a special case. Normally using stdout is fine
+    let mut stderr = io::stderr();
     execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
 
     let backend = CrosstermBackend::new(stderr);
@@ -73,32 +73,48 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     _ => {}
                 },
+
+
+
                 CurrentScreen::OnlineScreen(online_state) => match key.code {
                     KeyCode::Down => {
-                        *online_state = online_state.next();
+                        *online_state = online_state.clone().next();
                     }
                     KeyCode::Up => {
-                        *online_state = online_state.previous();
+                        *online_state = online_state.clone().previous();
                     }
                     KeyCode::Enter => {
-                        // terminal.current_buffer_mut();
                         match online_state {
                             OnlineOptions::Create => {
                                 app.current_screen = CurrentScreen::OnlineCreateScreen
                             }
                             OnlineOptions::Join => {
-                                app.current_screen = CurrentScreen::OnlineJoinScreen
+                                // toggle pop up
+                                *online_state = OnlineOptions::EnterCode(Input::new());
+                            }
+                            OnlineOptions::EnterCode(input) => {
+                                // TODO try to join lobby
+                                // on success
+                                app.current_screen = CurrentScreen::OnlineLobbyScreen
+                                // on failure
+                                // TODO
                             }
                         }
                     }
                     KeyCode::Esc => {
-                        app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online);
+                        match online_state {
+                            OnlineOptions::EnterCode(_input) => *online_state = OnlineOptions::Join,
+                            _ => app.current_screen = CurrentScreen::MenuScreen(MenuOptions::Online),
+                        }
                     }
                     KeyCode::Char('q') => {
                         return Ok(true);
                     }
                     _ => {}
                 },
+
+
+
                 CurrentScreen::OnlineCreateScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
@@ -108,7 +124,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     _ => {}
                 },
-                CurrentScreen::OnlineJoinScreen => match key.code {
+
+
+
+                CurrentScreen::OnlineLobbyScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
                     }
@@ -117,6 +136,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     _ => {}
                 },
+
+
+
                 CurrentScreen::TrainingCreateScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);
@@ -126,6 +148,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     _ => {}
                 },
+
+
+                
                 CurrentScreen::SettingsScreen => match key.code {
                     KeyCode::Char('q') => {
                         return Ok(true);

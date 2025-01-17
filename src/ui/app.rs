@@ -1,3 +1,5 @@
+use std::clone;
+
 #[derive(Debug, Clone, Copy)]
 pub enum MenuOptions {
     Online,
@@ -23,10 +25,23 @@ impl MenuOptions {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
+pub struct Input {
+    pub input: String,
+    char_index: usize,
+}
+
+impl Input {
+    pub fn new() -> Self {
+        Self { input: String::new(), char_index: 0 }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum OnlineOptions {
     Create,
     Join,
+    EnterCode(Input),
 }
 
 impl OnlineOptions {
@@ -34,6 +49,7 @@ impl OnlineOptions {
         match self {
             Self::Create => Self::Join,
             Self::Join => Self::Create,
+            Self::EnterCode(input) => Self::EnterCode(input),
         }
     }
 
@@ -46,7 +62,7 @@ pub enum CurrentScreen {
     MenuScreen(MenuOptions),
     OnlineScreen(OnlineOptions),
     OnlineCreateScreen,
-    OnlineJoinScreen,
+    OnlineLobbyScreen,
     TrainingCreateScreen,
     SettingsScreen,
 }

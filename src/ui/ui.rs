@@ -1,7 +1,7 @@
 use std::{error::Error, vec};
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect, Flex},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, Text},
@@ -29,21 +29,6 @@ fn render_main_block<'a>(
     block
 }
 
-fn get_rect_from_percentage(
-    direction: Direction,
-    percentages: Vec<u16>,
-    area: Rect,
-    rect_num: usize,
-) -> Option<Rect> {
-    let layout = Layout::new(direction, Constraint::from_percentages(percentages)).split(area);
-
-    if rect_num < layout.len() {
-        Some(layout[rect_num])
-    } else {
-        None
-    }
-}
-
 pub fn ui(frame: &mut Frame, app: &App) {
     match &app.current_screen {
         CurrentScreen::MenuScreen(menu_state) => {
@@ -62,43 +47,36 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
             let menu_blocks = [Block::new(), Block::new(), Block::new()];
 
-            // get middle of 30 | *40* | 30 horizontaly
-            if let Some(horiz_middle) = get_rect_from_percentage(
-                Direction::Horizontal,
-                vec![30, 40, 30],
-                block.inner(frame.area()),
-                1,
-            ) {
-                // get middle of 30 | *40* | 30 verticaly
-                if let Some(vert_middle) =
-                    get_rect_from_percentage(Direction::Vertical, vec![30, 40, 30], horiz_middle, 1)
-                {
-                    // render border around menu items
-                    frame.render_widget(Block::bordered(), vert_middle);
-                    let middle_middle_split = Layout::vertical(vec![
-                        // one more than needed for looks
-                        Constraint::Percentage(25),
-                        Constraint::Percentage(25),
-                        Constraint::Percentage(25),
-                        Constraint::Percentage(25),
-                    ])
-                    .split(vert_middle);
+            let horizontal = Layout::horizontal([Constraint::Percentage(40)]).flex(Flex::Center);
+            let vertical = Layout::vertical([Constraint::Percentage(40)]).flex(Flex::Center);
+            let [area] = vertical.areas(block.inner(frame.area()));
+            let [area] = horizontal.areas(area);
 
-                    // for each menu_text render its paragraph
-                    for (i, text) in menu_text.iter().enumerate() {
-                        let display_text = if i == *menu_state as usize {
-                            format!(">  {}  <", text)
-                        } else {
-                            text.to_string()
-                        };
 
-                        let paragraph = Paragraph::new(Line::from(display_text).centered())
-                            .block(menu_blocks[i].clone());
+            frame.render_widget(Block::bordered(), area);
+            let middle_middle_split = Layout::vertical(vec![
+                // one more than needed for looks
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+            ])
+            .split(area);
 
-                        // render menu items
-                        frame.render_widget(paragraph, middle_middle_split[i + 1]);
-                    }
-                }
+            // for each menu_text render its paragraph
+            for (i, text) in menu_text.iter().enumerate() {
+                let display_text = if i == *menu_state as usize {
+                    format!(">  {}  <", text)
+                } else {
+                    text.to_string()
+                };
+
+                let paragraph = Paragraph::new(Line::from(display_text).centered())
+                    .block(menu_blocks[i].clone());
+
+                // render menu items
+                frame.render_widget(paragraph, middle_middle_split[i + 1]);
+
             }
         }
         CurrentScreen::OnlineScreen(online_state) => {
@@ -120,30 +98,39 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
             let menu_blocks = [Block::new(), Block::new()];
 
-            // get middle of 30 | *40* | 30 horizontaly
-            if let Some(horiz_middle) = get_rect_from_percentage(
-                Direction::Horizontal,
-                vec![30, 40, 30],
-                block.inner(frame.area()),
-                1,
-            ) {
-                // get middle of 30 | *40* | 30 verticaly
-                if let Some(vert_middle) =
-                    get_rect_from_percentage(Direction::Vertical, vec![30, 40, 30], horiz_middle, 1)
-                {
-                    // render border around menu items
-                    frame.render_widget(Block::bordered(), vert_middle);
-                    let middle_middle_split = Layout::vertical(vec![
-                        // one more than needed for looks
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33),
-                    ])
-                    .split(vert_middle);
+            let vertical = Layout::vertical([Constraint::Percentage(40)]).flex(Flex::Center);
+            let horizontal = Layout::horizontal([Constraint::Percentage(40)]).flex(Flex::Center);
+            let [area] = vertical.areas(block.inner(frame.area()));
+            let [middle_area] = horizontal.areas(area);
 
+            
+            // render border around menu items
+            frame.render_widget(Block::bordered(), middle_area);
+            let middle_split = Layout::vertical(vec![
+                // one more than needed for looks
+                Constraint::Percentage(33),
+                Constraint::Percentage(33),
+                Constraint::Percentage(33),
+            ])
+            .split(middle_area);
+
+            match online_state {
+                OnlineOptions::EnterCode(input) => {
+                    // load input window
+                    let title = Line::from(" Enter code ");
+                    let block = Block::bordered()
+                        .title(title.left_aligned());
+
+                    frame.render_widget(block.clone(), middle_area);
+
+                    let input_paragraph = Paragraph::new(input.input.clone()).block(Block::bordered().title("Input"));
+
+                    frame.render_widget(input_paragraph, middle_split[1]);
+                },
+                OnlineOptions::Create => {
                     // for each menu_text render its paragraph
                     for (i, text) in menu_text.iter().enumerate() {
-                        let display_text = if i == *online_state as usize {
+                        let display_text = if i == 0 {
                             format!(">  {}  <", text)
                         } else {
                             text.to_string()
@@ -153,7 +140,22 @@ pub fn ui(frame: &mut Frame, app: &App) {
                             .block(menu_blocks[i].clone());
 
                         // render menu items
-                        frame.render_widget(paragraph, middle_middle_split[i + 1]);
+                        frame.render_widget(paragraph, middle_split[i + 1]);
+                    }
+                }
+                OnlineOptions::Join => {
+                    for (i, text) in menu_text.iter().enumerate() {
+                        let display_text = if i == 1 {
+                            format!(">  {}  <", text)
+                        } else {
+                            text.to_string()
+                        };
+
+                        let paragraph = Paragraph::new(Line::from(display_text).centered())
+                            .block(menu_blocks[i].clone());
+
+                        // render menu items
+                        frame.render_widget(paragraph, middle_split[i + 1]);
                     }
                 }
             }
@@ -170,12 +172,14 @@ pub fn ui(frame: &mut Frame, app: &App) {
                 ],
             );
         }
-        CurrentScreen::OnlineJoinScreen => {
-            let _block = render_main_block(
+        CurrentScreen::OnlineLobbyScreen => {
+            let lobby_code = "123456";
+            let title_text = format!(" quadropong - Online lobby {} ", lobby_code);
+            let block = render_main_block(
                 frame,
-                " quadropong - Join online lobby ",
+                title_text.as_str(),
                 vec![
-                    " Back to menu ".into(),
+                    " Back ".into(),
                     "<ESC> ".blue().bold(),
                     " Quit ".into(),
                     "<Q> ".blue().bold(),
@@ -187,7 +191,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
                 frame,
                 " quadropong - Creating training lobby ",
                 vec![
-                    " Back to menu ".into(),
+                    " Back ".into(),
                     "<ESC> ".blue().bold(),
                     " Quit ".into(),
                     "<Q> ".blue().bold(),
@@ -199,7 +203,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
                 frame,
                 " quadropong - Settings ",
                 vec![
-                    " Back to menu ".into(),
+                    " Back ".into(),
                     "<ESC> ".blue().bold(),
                     " Quit ".into(),
                     "<Q> ".blue().bold(),
