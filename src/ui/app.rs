@@ -75,11 +75,13 @@ impl GameInfo {
         player_id: Uuid,
         server_addr: std::net::SocketAddr,
     ) -> Result<Self, std::io::Error> {
+        let socket = std::net::UdpSocket::bind("0.0.0.0:0")?;
+        socket.set_nonblocking(true)?;
         Ok(Self {
             game,
             player_id,
             server_addr,
-            udp_client: std::net::UdpSocket::bind("0.0.0.0:0")?,
+            udp_client: socket,
         })
     }
 }
