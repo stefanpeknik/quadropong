@@ -1,4 +1,5 @@
-use std::clone;
+use crate::models::game::Game;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MenuOptions {
@@ -33,7 +34,10 @@ pub struct Input {
 
 impl Input {
     pub fn new() -> Self {
-        Self { input: String::new(), char_index: 0 }
+        Self {
+            input: String::new(),
+            char_index: 0,
+        }
     }
 }
 
@@ -58,6 +62,28 @@ impl OnlineOptions {
     }
 }
 
+pub struct GameInfo {
+    pub game: Game,
+    pub player_id: Uuid,
+    pub server_addr: std::net::SocketAddr,
+    pub udp_client: std::net::UdpSocket,
+}
+
+impl GameInfo {
+    pub fn new(
+        game: Game,
+        player_id: Uuid,
+        server_addr: std::net::SocketAddr,
+    ) -> Result<Self, std::io::Error> {
+        Ok(Self {
+            game,
+            player_id,
+            server_addr,
+            udp_client: std::net::UdpSocket::bind("0.0.0.0:0")?,
+        })
+    }
+}
+
 pub enum CurrentScreen {
     MenuScreen(MenuOptions),
     OnlineScreen(OnlineOptions),
@@ -65,6 +91,7 @@ pub enum CurrentScreen {
     OnlineLobbyScreen,
     TrainingCreateScreen,
     SettingsScreen,
+    GameScreen(GameInfo),
 }
 
 pub enum CurrentlyEditing {

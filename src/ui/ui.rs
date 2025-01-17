@@ -1,7 +1,7 @@
 use std::{error::Error, vec};
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect, Flex},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, Text},
@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::ui::app::*;
+use crate::{models::game::Game, ui::app::*};
 
 fn render_main_block<'a>(
     frame: &mut Frame,
@@ -29,7 +29,7 @@ fn render_main_block<'a>(
     block
 }
 
-pub fn ui(frame: &mut Frame, app: &App) {
+pub fn ui(frame: &mut Frame, app: &mut App) {
     match &app.current_screen {
         CurrentScreen::MenuScreen(menu_state) => {
             // Render main block
@@ -51,7 +51,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
             let vertical = Layout::vertical([Constraint::Percentage(40)]).flex(Flex::Center);
             let [area] = vertical.areas(block.inner(frame.area()));
             let [area] = horizontal.areas(area);
-
 
             frame.render_widget(Block::bordered(), area);
             let middle_middle_split = Layout::vertical(vec![
@@ -76,7 +75,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
                 // render menu items
                 frame.render_widget(paragraph, middle_middle_split[i + 1]);
-
             }
         }
         CurrentScreen::OnlineScreen(online_state) => {
@@ -103,7 +101,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
             let [area] = vertical.areas(block.inner(frame.area()));
             let [middle_area] = horizontal.areas(area);
 
-            
             // render border around menu items
             frame.render_widget(Block::bordered(), middle_area);
             let middle_split = Layout::vertical(vec![
@@ -118,15 +115,15 @@ pub fn ui(frame: &mut Frame, app: &App) {
                 OnlineOptions::EnterCode(input) => {
                     // load input window
                     let title = Line::from(" Enter code ");
-                    let block = Block::bordered()
-                        .title(title.left_aligned());
+                    let block = Block::bordered().title(title.left_aligned());
 
                     frame.render_widget(block.clone(), middle_area);
 
-                    let input_paragraph = Paragraph::new(input.input.clone()).block(Block::bordered().title("Input"));
+                    let input_paragraph =
+                        Paragraph::new(input.input.clone()).block(Block::bordered().title("Input"));
 
                     frame.render_widget(input_paragraph, middle_split[1]);
-                },
+                }
                 OnlineOptions::Create => {
                     // for each menu_text render its paragraph
                     for (i, text) in menu_text.iter().enumerate() {
@@ -209,6 +206,20 @@ pub fn ui(frame: &mut Frame, app: &App) {
                     "<Q> ".blue().bold(),
                 ],
             );
+        }
+        CurrentScreen::GameScreen(game_info) => {
+            let _block = render_main_block(
+                frame,
+                " quadropong - Game ",
+                vec![
+                    " Back ".into(),
+                    "<ESC> ".blue().bold(),
+                    " Quit ".into(),
+                    "<Q> ".blue().bold(),
+                ],
+            );
+
+            // TODO render game screen
         }
     }
 }
