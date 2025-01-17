@@ -47,9 +47,20 @@ impl Input {
         }
     }
 
-    pub fn insert(&mut self, new_char: char) {
+    fn move_right_multiple(&mut self, num: usize) {
+        if self.char_index < self.input.len() {
+            self.char_index += num;
+        }
+    }
+
+    pub fn insert_char(&mut self, new_char: char) {
         self.input.insert(self.char_index, new_char);
         self.move_right();
+    }
+
+    pub fn insert_clipboard(&mut self, new_string: String) {
+        self.input.insert_str(self.char_index, &new_string);
+        self.move_right_multiple(new_string.chars().count());
     }
 
     pub fn delete_char(&mut self) {

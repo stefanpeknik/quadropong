@@ -9,6 +9,7 @@ use ratatui::{
     },
     Terminal,
 };
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
 use quadropong::ui::{app::*, ui::*};
 
@@ -123,13 +124,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     KeyCode::Tab => {
                         if let OnlineOptions::EnterCode(input) = online_state {
-                            // TODO insert from clipboard
+                            if let Ok(mut ctx) = ClipboardContext::new() {
+                                if let Ok(clipboard_content) = ctx.get_contents() {
+                                    input.insert_clipboard(clipboard_content);
+                                }
+                            }
                         }
                     }
                     KeyCode::Char(char) => {
                         // Allow character input in EnterCode state
                         if let OnlineOptions::EnterCode(input) = online_state {
-                            input.insert(char);
+                            input.insert_char(char);
                         } else if char == 'q' {
                             return Ok(true);
                         }
