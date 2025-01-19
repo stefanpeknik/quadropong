@@ -13,7 +13,7 @@ pub enum GameState {
     Finished,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Game {
     pub id: Uuid,
     pub players: HashMap<Uuid, Player>,

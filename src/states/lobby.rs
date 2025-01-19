@@ -1,4 +1,5 @@
 use crate::game_models::game::Game;
+use crate::net::tcp::get_game;
 
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
@@ -7,6 +8,7 @@ use super::utils::{draw_inner_rectangle, draw_outer_rectangle, render_list};
 use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
 use ratatui::Frame;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub enum Options {
@@ -32,14 +34,16 @@ pub struct Lobby {
     options: Vec<Options>,
     selected: usize,
     game: Game,
+    our_player_id: Uuid,
 }
 
 impl Lobby {
-    pub fn new(game: Game) -> Self {
+    pub fn new(game: Game, our_player_id: Uuid) -> Self {
         Self {
             options: Options::list(),
             selected: 0,
             game,
+            our_player_id,
         }
     }
 }
@@ -70,6 +74,14 @@ impl Update for Lobby {
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+        match get_game(self.game.id).await {
+            Ok(game) => {
+                self.game = game;
+            }
+            Err(e) => {
+                // TODO: Handle this error
+            }
+        }
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Up => self.previous(),
@@ -98,15 +110,17 @@ impl Render for Lobby {
 
         let inner_rect = draw_inner_rectangle(frame, outer_rect);
 
-        render_list(
-            frame,
-            &self
-                .options
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>(),
-            self.selected,
-            inner_rect,
-        );
+        let mut list = vec![self.game.id.to_string()];
+        let mut players: Vec<_> = self
+            .game
+            .players
+            .iter()
+            .map(|(p_id, p)| format!("{}: {}", p_id, p.name))
+            .collect();
+        players.sort();
+        list.extend(players);
+        list.push(format!("You: {}", self.our_player_id));
+
+        render_list(frame, &list, self.selected, inner_rect);
     }
 }

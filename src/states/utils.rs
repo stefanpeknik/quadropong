@@ -8,12 +8,6 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
-use reqwest::Client;
-use serde_json::from_str;
-use tokio::net::TcpStream;
-use uuid::Uuid;
-
-use crate::game_models::{game::Game, player::Player};
 
 /// Draws the outer rectangle, renders it, and returns its Rect
 pub fn draw_outer_rectangle(
@@ -145,39 +139,4 @@ impl Input {
             self.input.remove(self.char_index);
         }
     }
-}
-
-const SERVER_ADDR: &str = "127.0.0.1:34254";
-
-pub async fn create_game() -> Game {
-    let url = format!("{}/game", SERVER_ADDR);
-    let client = Client::new();
-    let response = client
-        .post(&url)
-        .send()
-        .await
-        .expect("Failed to send request");
-
-    let game: Game = from_str(&response.text().await.expect("Failed to read response text"))
-        .expect("Failed to deserialize response");
-
-    game
-}
-
-pub async fn join_game(game_id: Uuid) -> Player {
-    let url = format!("{}/game/{}/join", SERVER_ADDR, game_id);
-    let client = Client::new();
-    let response = client
-        .post(&url)
-        .header("Content-Type", "application/json")
-        .body("{}")
-        .send()
-        .await
-        .expect("Failed to send request");
-
-    let response_text = response.text().await.expect("Failed to read response text");
-
-    let player: Player = from_str(&response_text).expect("Failed to deserialize response");
-
-    player
 }

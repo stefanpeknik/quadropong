@@ -1,8 +1,10 @@
+use crate::net::tcp::{create_game, get_game, join_game};
+
 use super::lobby::Lobby;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::{
-    create_game, draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects, render_list,
+    draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects,
     render_text_in_center_of_rect, Input,
 };
 
@@ -94,39 +96,65 @@ impl Update for CreateOrJoinLobby {
             // match keys for the selected option
             match self.options[self.selected] {
                 Options::Create => match key_code {
+                    KeyCode::Enter => match create_game().await {
+                        // Game is created, but we need to join it to get our player id
+                        Ok(game) => match join_game(game.id).await {
+                            // We successfully joined the game
+                            Ok(our_player) => {
+                                return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
+                            }
+                            Err(e) => {
+                                self.error_message = Some(e.to_string());
+                            }
+                        },
+                        Err(e) => {
+                            self.error_message = Some(e.to_string());
+                        }
+                    },
+                    _ => {}
+                },
+                Options::Join => match key_code {
+                    KeyCode::Left => {
+                        self.join_lobby_input.move_left();
+                    }
+                    KeyCode::Right => {
+                        self.join_lobby_input.move_right();
+                    }
+                    KeyCode::Char(c) => {
+                        self.join_lobby_input.insert_char(c);
+                    }
+                    KeyCode::Backspace => {
+                        self.join_lobby_input.delete_char();
+                    }
+                    KeyCode::Tab => {
+                        if let Ok(mut ctx) = ClipboardContext::new() {
+                            if let Ok(clipboard_content) = ctx.get_contents() {
+                                self.join_lobby_input.insert_clipboard(clipboard_content);
+                            }
+                        }
+                    }
                     KeyCode::Enter => {
-                        let game = create_game().await;
-                        // TODO return Ok(Some(Box::new(Lobby::new())));
+                        match uuid::Uuid::parse_str(&self.join_lobby_input.input) {
+                            Ok(inputted_game_id) => match get_game(inputted_game_id).await {
+                                Ok(game) => match join_game(game.id).await {
+                                    Ok(our_player) => {
+                                        return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
+                                    }
+                                    Err(e) => {
+                                        self.error_message = Some(e.to_string());
+                                    }
+                                },
+                                Err(e) => {
+                                    self.error_message = Some(e.to_string());
+                                }
+                            },
+                            Err(e) => {
+                                self.error_message = Some(format!("Invalid UUID: {}", e));
+                            }
+                        };
                     }
                     _ => {}
                 },
-                Options::Join => {
-                    match key_code {
-                        KeyCode::Left => {
-                            self.join_lobby_input.move_left();
-                        }
-                        KeyCode::Right => {
-                            self.join_lobby_input.move_right();
-                        }
-                        KeyCode::Char(c) => {
-                            self.join_lobby_input.insert_char(c);
-                        }
-                        KeyCode::Backspace => {
-                            self.join_lobby_input.delete_char();
-                        }
-                        KeyCode::Tab => {
-                            if let Ok(mut ctx) = ClipboardContext::new() {
-                                if let Ok(clipboard_content) = ctx.get_contents() {
-                                    self.join_lobby_input.insert_clipboard(clipboard_content);
-                                }
-                            }
-                        }
-                        KeyCode::Enter => {
-                            // TODO join the lobby
-                        }
-                        _ => {}
-                    }
-                }
             }
         }
         Ok(Some(Box::new(self.clone())))
@@ -145,11 +173,12 @@ impl Render for CreateOrJoinLobby {
 
         let layout = Layout::vertical(vec![
             Constraint::Percentage(30),
-            Constraint::Percentage(55),
-            Constraint::Percentage(5),
+            Constraint::Percentage(40),
+            Constraint::Percentage(15),
+            Constraint::Percentage(15),
         ]);
 
-        let [create_area, join_area, error_area] = layout.areas(inner_rect);
+        let [create_area, join_area, error_area, _] = layout.areas(inner_rect);
 
         // render create lobby area
         let create_area_text = if self.options[self.selected] == Options::Create {
@@ -191,9 +220,15 @@ impl Render for CreateOrJoinLobby {
 
         // render error message area
         if let Some(error_message) = &self.error_message {
+            let error_layout = Layout::horizontal(vec![
+                Constraint::Percentage(10),
+                Constraint::Percentage(80),
+                Constraint::Percentage(10),
+            ]);
+            let [_, error_message_area, _] = error_layout.areas(error_area);
             frame.render_widget(
                 Paragraph::new(error_message.clone()).red().centered(),
-                error_area,
+                evenly_distanced_rects(error_message_area, 2)[1],
             );
         }
     }
