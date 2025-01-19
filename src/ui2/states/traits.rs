@@ -24,4 +24,14 @@ pub trait ListEnum {
         Self: std::marker::Sized;
 }
 
-pub trait State: Render + Update + Send {}
+pub trait State: Render + Update + Send {
+    // Add a method to clone the trait object
+    fn clone_box(&self) -> Box<dyn State>;
+}
+
+// Implement `Clone` for `Box<dyn State>`
+impl Clone for Box<dyn State> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}

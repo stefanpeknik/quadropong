@@ -52,7 +52,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
             let [area] = vertical.areas(block.inner(frame.area()));
             let [area] = horizontal.areas(area);
 
-
             frame.render_widget(Block::bordered(), area);
             let middle_middle_split = Layout::vertical(vec![
                 // one more than needed for looks
@@ -76,7 +75,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
 
                 // render menu items
                 frame.render_widget(paragraph, middle_middle_split[i + 1]);
-
             }
         }
         CurrentScreen::OnlineScreen(online_state) => {
@@ -103,7 +101,6 @@ pub fn ui(frame: &mut Frame, app: &App) {
             let [area] = vertical.areas(block.inner(frame.area()));
             let [middle_area] = horizontal.areas(area);
 
-            
             // render border around menu items
             frame.render_widget(Block::bordered(), middle_area);
             let middle_split = Layout::vertical(vec![
@@ -122,17 +119,22 @@ pub fn ui(frame: &mut Frame, app: &App) {
                     let instructions = Line::from(vec![
                         " Copy from clipboard ".into(),
                         "<TAB> ".green().bold(),
-                    ]).centered();
+                    ])
+                    .centered();
                     let block = Block::bordered()
                         .title(title.left_aligned())
                         .title_bottom(instructions);
                     frame.render_widget(block.clone(), middle_area);
 
                     let [input_area] = horizontal.areas(middle_split[1]);
-                    let input_paragraph = Paragraph::new(input.input.clone()).block(Block::bordered().title(" Input "));
+                    let input_paragraph = Paragraph::new(input.input.clone())
+                        .block(Block::bordered().title(" Input "));
                     frame.render_widget(input_paragraph, input_area);
-                    frame.set_cursor_position(Position::new(input_area.x + input.char_index as u16 + 1, input_area.y + 1));
-                },
+                    frame.set_cursor_position(Position::new(
+                        input_area.x + input.char_index as u16 + 1,
+                        input_area.y + 1,
+                    ));
+                }
                 OnlineOptions::Create => {
                     // for each menu_text render its paragraph
                     for (i, text) in menu_text.iter().enumerate() {

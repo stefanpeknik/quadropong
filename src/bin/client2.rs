@@ -1,10 +1,10 @@
-use crossterm::event::poll;
+use crossterm::event::{poll, KeyCode, KeyEvent};
 use std::{
     io::{self, Stderr},
     sync::{atomic::AtomicBool, Arc},
     time::Duration,
 };
-use tokio::{self, sync::Mutex, task};
+use tokio::{self, sync::Mutex, task, time::Instant};
 
 use ratatui::{
     backend::CrosstermBackend,
@@ -66,7 +66,10 @@ impl App {
                 // Render loop
                 while render_running.load(std::sync::atomic::Ordering::Relaxed) {
                     interval.tick().await;
-                    let current_state = render_state.lock().await;
+                    let current_state = {
+                        let state = render_state.lock().await;
+                        state.clone() // Take a snapshot of the state (clone it) to render it
+                    };
                     terminal.draw(|f| current_state.render(f))?;
                 }
                 restore_terminal(&mut terminal)?;
@@ -80,22 +83,33 @@ impl App {
         let update_handle: tokio::task::JoinHandle<Result<(), io::Error>> =
             task::spawn(async move {
                 let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(5));
+                let mut last_key_event_time = Instant::now();
+                let key_event_interval = Duration::from_millis(10);
+                let mut last_key_event: Option<KeyEvent> = None;
+
                 // Update loop
                 while update_running.load(std::sync::atomic::Ordering::Relaxed) {
                     interval.tick().await;
                     // Poll for user input
                     let input = if poll(Duration::ZERO)? {
-                        if let Event::Key(key) = event::read()? {
-                            if key.kind == event::KeyEventKind::Release {
-                                continue;
+                        let now = Instant::now();
+                        if let Event::Key(key_event) = event::read()? {
+                            // Reduction for continuous key events
+                            if Some(key_event) != last_key_event
+                                || now.duration_since(last_key_event_time) >= key_event_interval
+                            {
+                                // Update the last key event time and the last key event
+                                last_key_event_time = now;
+                                last_key_event = Some(key_event);
+                                Some(key_event.code) // Capture the pressed key
                             } else {
-                                Some(key.code)
+                                None
                             }
                         } else {
-                            None
+                            None // No input captured
                         }
                     } else {
-                        None
+                        None // No input captured
                     };
 
                     let mut current_state = update_state.lock().await;

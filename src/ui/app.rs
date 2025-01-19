@@ -33,7 +33,10 @@ pub struct Input {
 
 impl Input {
     pub fn new() -> Self {
-        Self { input: String::new(), char_index: 0 }
+        Self {
+            input: String::new(),
+            char_index: 0,
+        }
     }
 
     pub fn move_left(&mut self) {
@@ -43,13 +46,13 @@ impl Input {
 
     pub fn move_right(&mut self) {
         if self.char_index < self.input.len() {
-            self.char_index += 1;
+            self.char_index = self.char_index.saturating_add(1);
         }
     }
 
     fn move_right_multiple(&mut self, num: usize) {
         if self.char_index < self.input.len() {
-            self.char_index += num;
+            self.char_index = self.char_index.saturating_add(num);
         }
     }
 
@@ -69,8 +72,6 @@ impl Input {
             self.input.remove(self.char_index);
         }
     }
-
-
 }
 
 #[derive(Debug, Clone)]
