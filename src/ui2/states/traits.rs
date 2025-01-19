@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
@@ -11,8 +13,9 @@ pub trait Render {
     fn render(&self, frame: &mut Frame);
 }
 
+#[async_trait]
 pub trait Update {
-    fn update(
+    async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error>;

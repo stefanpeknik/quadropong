@@ -114,7 +114,7 @@ impl App {
 
                     let mut current_state = update_state.lock().await;
                     // Update the state
-                    match current_state.update(input) {
+                    match current_state.update(input).await {
                         Ok(Some(new_state)) => {
                             // Update the state if a new state is returned
                             *current_state = new_state;

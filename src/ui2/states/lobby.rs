@@ -1,3 +1,5 @@
+use crate::ui2::game_models::game::Game;
+
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::{draw_inner_rectangle, draw_outer_rectangle, render_list};
@@ -29,13 +31,15 @@ impl std::fmt::Display for Options {
 pub struct Lobby {
     options: Vec<Options>,
     selected: usize,
+    game: Game,
 }
 
 impl Lobby {
-    pub fn new() -> Self {
+    pub fn new(game: Game) -> Self {
         Self {
             options: Options::list(),
             selected: 0,
+            game,
         }
     }
 }
@@ -59,8 +63,10 @@ impl State for Lobby {
         Box::new(self.clone())
     }
 }
+
+#[async_trait::async_trait]
 impl Update for Lobby {
-    fn update(
+    async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {

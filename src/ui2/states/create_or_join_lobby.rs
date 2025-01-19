@@ -1,8 +1,8 @@
-use super::create_lobby::CreateLobby;
+use super::lobby::Lobby;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::{
-    draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects, render_list,
+    create_game, draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects, render_list,
     render_text_in_center_of_rect, Input,
 };
 
@@ -40,6 +40,7 @@ pub struct CreateOrJoinLobby {
     options: Vec<Options>,
     selected: usize,
     join_lobby_input: Input,
+    error_message: Option<String>,
 }
 
 impl CreateOrJoinLobby {
@@ -48,6 +49,7 @@ impl CreateOrJoinLobby {
             options: Options::list(),
             selected: 0,
             join_lobby_input: Input::new(),
+            error_message: None,
         }
     }
 }
@@ -71,8 +73,10 @@ impl State for CreateOrJoinLobby {
         Box::new(self.clone())
     }
 }
+
+#[async_trait::async_trait]
 impl Update for CreateOrJoinLobby {
-    fn update(
+    async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
@@ -91,7 +95,8 @@ impl Update for CreateOrJoinLobby {
             match self.options[self.selected] {
                 Options::Create => match key_code {
                     KeyCode::Enter => {
-                        return Ok(Some(Box::new(CreateLobby::new())));
+                        let game = create_game().await;
+                        // TODO return Ok(Some(Box::new(Lobby::new())));
                     }
                     _ => {}
                 },
@@ -138,9 +143,13 @@ impl Render for CreateOrJoinLobby {
 
         let inner_rect = draw_inner_rectangle(frame, outer_rect);
 
-        let layout = Layout::vertical(vec![Constraint::Percentage(30), Constraint::Percentage(60)]);
+        let layout = Layout::vertical(vec![
+            Constraint::Percentage(30),
+            Constraint::Percentage(55),
+            Constraint::Percentage(5),
+        ]);
 
-        let [create_area, join_area] = layout.areas(inner_rect);
+        let [create_area, join_area, error_area] = layout.areas(inner_rect);
 
         // render create lobby area
         let create_area_text = if self.options[self.selected] == Options::Create {
@@ -179,5 +188,13 @@ impl Render for CreateOrJoinLobby {
             Paragraph::new(self.join_lobby_input.input.clone()),
             inner_join_input_area,
         );
+
+        // render error message area
+        if let Some(error_message) = &self.error_message {
+            frame.render_widget(
+                Paragraph::new(error_message.clone()).red().centered(),
+                error_area,
+            );
+        }
     }
 }

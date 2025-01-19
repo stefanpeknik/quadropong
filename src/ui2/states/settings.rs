@@ -59,8 +59,10 @@ impl State for Settings {
         Box::new(self.clone())
     }
 }
+
+#[async_trait::async_trait]
 impl Update for Settings {
-    fn update(
+    async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {

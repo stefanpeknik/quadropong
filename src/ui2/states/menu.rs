@@ -64,8 +64,10 @@ impl State for Menu {
         Box::new(self.clone())
     }
 }
+
+#[async_trait::async_trait]
 impl Update for Menu {
-    fn update(
+    async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
