@@ -1,7 +1,7 @@
 use std::{error::Error, vec};
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Position, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, Text},
@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::ui::app::*;
+use crate::{models::game::Game, ui::app::*};
 
 fn render_main_block<'a>(
     frame: &mut Frame,
@@ -29,7 +29,7 @@ fn render_main_block<'a>(
     block
 }
 
-pub fn ui(frame: &mut Frame, app: &App) {
+pub fn ui(frame: &mut Frame, app: &mut App) {
     match &app.current_screen {
         CurrentScreen::MenuScreen(menu_state) => {
             // Render main block
@@ -121,8 +121,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
                         "<TAB> ".green().bold(),
                     ])
                     .centered();
-                    let block = Block::bordered()
-                        .title(title.left_aligned())
+                    let block = Block::bordered().title(title.left_aligned())
                         .title_bottom(instructions);
                     frame.render_widget(block.clone(), middle_area);
 
@@ -217,6 +216,20 @@ pub fn ui(frame: &mut Frame, app: &App) {
                     "<Q> ".blue().bold(),
                 ],
             );
+        }
+        CurrentScreen::GameScreen(game_info) => {
+            let _block = render_main_block(
+                frame,
+                " quadropong - Game ",
+                vec![
+                    " Back ".into(),
+                    "<ESC> ".blue().bold(),
+                    " Quit ".into(),
+                    "<Q> ".blue().bold(),
+                ],
+            );
+
+            // TODO render game screen
         }
     }
 }
