@@ -3,9 +3,10 @@ use crate::net::tcp::{create_game, get_game, join_game};
 use super::lobby::Lobby;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::{
+use super::utils::input::Input;
+use super::utils::render::{
     draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects,
-    render_text_in_center_of_rect, Input,
+    render_text_in_center_of_rect,
 };
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};

@@ -1,7 +1,7 @@
 use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::settings::Settings;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::{draw_inner_rectangle, draw_outer_rectangle, render_list};
+use super::utils::render::{draw_inner_rectangle, draw_outer_rectangle, render_list};
 
 use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
