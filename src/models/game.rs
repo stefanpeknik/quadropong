@@ -2,12 +2,12 @@ use chrono;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::fmt::{self, Display, Formatter};
 use uuid::Uuid;
 
 use crate::GameError;
 
 use super::ball::Ball;
+use super::dto::GameDto;
 use super::player::PlayerPosition;
 use super::Player;
 
@@ -16,6 +16,7 @@ const BALL_SPEED: f32 = 0.15; // Constant ball speed
 const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
 const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
 const GAME_SIZE: f32 = 10.0; // Since it's a square
+const MAX_PLAYERS: usize = 4;
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum GameState {
@@ -30,26 +31,9 @@ pub struct Game {
     pub id: Uuid,
     pub players: HashMap<Uuid, Player>,
     pub state: GameState,
-    pub max_players: usize,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
     pub ball: Option<Ball>,
-}
-
-impl Display for Game {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Game ID: {}", self.id)?;
-        writeln!(f, "State: {:?}", self.state)?;
-        writeln!(f, "Players ({}):", self.players.len())?;
-        for (_, player) in &self.players {
-            writeln!(
-                f,
-                "  - {} (ID: {}), Score: {}",
-                player.name, player.id, player.score
-            )?;
-        }
-        Ok(())
-    }
 }
 
 impl Game {
@@ -58,15 +42,19 @@ impl Game {
             id: Uuid::new_v4(),
             players: HashMap::new(),
             state: GameState::WaitingForPlayers,
-            max_players: 4,
             created_at: chrono::Utc::now(),
             started_at: None,
             ball: Some(Ball::new()),
         }
     }
 
+    pub fn to_network_bytes(&self) -> Result<Vec<u8>, rmp_serde::encode::Error> {
+        let dto = GameDto::from(self.clone());
+        rmp_serde::to_vec(&dto)
+    }
+
     pub fn add_player(&mut self, player: Player) -> Result<(), GameError> {
-        if self.players.len() >= self.max_players {
+        if self.is_full() {
             return Err(GameError::GameFull);
         }
         self.players.insert(player.id, player);
@@ -102,7 +90,7 @@ impl Game {
     }
 
     pub fn is_full(&self) -> bool {
-        self.players.len() >= self.max_players
+        self.players.len() >= MAX_PLAYERS
     }
 
     pub fn get_player(&self, id: &Uuid) -> Option<&Player> {
@@ -122,13 +110,14 @@ impl Game {
             return Err(GameError::InvalidStateTransition);
         }
 
+        // Filter players with `addr` assigned - there must be at least 2 players to start the game
         let joined_players = self
             .players
-            .values() // Iterate over the players
-            .filter(|player| player.addr.is_some()) // Filter players with `addr` assigned
+            .values()
+            .filter(|player| player.addr.is_some())
             .count();
 
-        if self.players.len() < self.max_players || joined_players < self.max_players {
+        if joined_players < 2 {
             return Err(GameError::InvalidStateTransition);
         }
 
@@ -212,8 +201,7 @@ impl Game {
 
                             ball.position.y = paddle_y + ball.radius;
 
-                            // Increment the player's score
-                            player.score += 1;
+                            player.increment_score();
 
                             return;
                         }
@@ -241,8 +229,7 @@ impl Game {
 
                             ball.position.y = paddle_y - ball.radius;
 
-                            // Increment the player's score
-                            player.score += 1;
+                            player.increment_score();
 
                             return;
                         }
@@ -270,8 +257,7 @@ impl Game {
 
                             ball.position.x = paddle_x + ball.radius;
 
-                            // Increment the player's score
-                            player.score += 1;
+                            player.increment_score();
 
                             return;
                         }
@@ -299,7 +285,7 @@ impl Game {
 
                             ball.position.x = paddle_x - ball.radius;
 
-                            player.score += 1;
+                            player.increment_score();
                             return;
                         }
                     }

@@ -1,5 +1,6 @@
 mod ball;
 mod client_input;
+mod dto;
 mod game;
 mod game_rooms;
 mod player;

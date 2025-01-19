@@ -39,18 +39,15 @@ async fn main() {
         let mut buf = [0; 1024];
         loop {
             match socket_recv.recv_from(&mut buf) {
-                Ok((size, addr)) => {
-                    // Try msgpack deserialization as fallback
-                    match rmp_serde::from_slice::<ClientInput>(&buf[..size]) {
-                        Ok(input) => {
-                            let input = ClientInputWithAddr { addr, input };
-                            message_queue_recv.lock().await.push_back(input);
-                        }
-                        Err(e) => {
-                            println!("Error deserializing input from {}: {}", addr, e);
-                        }
+                Ok((size, addr)) => match rmp_serde::from_slice::<ClientInput>(&buf[..size]) {
+                    Ok(input) => {
+                        let input = ClientInputWithAddr { addr, input };
+                        message_queue_recv.lock().await.push_back(input);
                     }
-                }
+                    Err(e) => {
+                        println!("Error deserializing input from {}: {}", addr, e);
+                    }
+                },
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     tokio::task::yield_now().await;
                 }
@@ -92,13 +89,18 @@ async fn main() {
 
             // Broadcast the game state to all players
             for game in games {
-                let serialized = rmp_serde::to_vec(&game).unwrap();
-
-                for player in game.players.values() {
-                    if let Some(addr) = player.addr {
-                        if let Err(e) = socket.send_to(&serialized, addr) {
-                            eprintln!("Error sending player state: {}", e);
+                match game.to_network_bytes() {
+                    Ok(serialized) => {
+                        for player in game.players.values() {
+                            if let Some(addr) = player.addr {
+                                if let Err(e) = socket.send_to(&serialized, addr) {
+                                    eprintln!("Failed to send game state to {}: {}", addr, e);
+                                }
+                            }
                         }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to serialize game state: {}", e);
                     }
                 }
             }

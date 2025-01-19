@@ -64,10 +64,8 @@ class ClientInputType(str, Enum):
 
 @dataclass
 class Player:
-    id: str
     name: str
     score: int
-    address: Optional[str]
     position: Optional[str]
     paddle_pos: float
     paddle_delta: float
@@ -306,11 +304,10 @@ def main():
             data, addr = sock.recvfrom(1024)
             unpacked = msgpack.unpackb(data, raw=False)
 
-            if isinstance(unpacked, list) and len(unpacked) == 7:
-                game_id, players_dict, state, max_players, created_at, _, ball_data = (
+            if isinstance(unpacked, list) and len(unpacked) == 6:
+                game_id, state, created_at, started_at, ball_data, players_dict = (
                     unpacked
                 )
-
                 # Create Ball object directly from the received coordinates (already in 0-10 range)
                 if isinstance(ball_data, list) and len(ball_data) == 3:
                     ball_position, ball_velocity, ball_radius = ball_data
@@ -329,10 +326,8 @@ def main():
         # Draw paddles using current game state
         for player_id_key, player_data in game_state.players.items():
             (
-                id,
                 name,
                 score,
-                address,
                 position,
                 paddle_pos,
                 paddle_delta,
