@@ -9,7 +9,6 @@ use crate::{
 };
 
 pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, addr: SocketAddr) {
-    //println!("Handling incoming message");
     let game_id = match Uuid::parse_str(&input.game_id) {
         Ok(id) => id,
         Err(_) => return (),

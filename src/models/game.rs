@@ -202,8 +202,7 @@ impl Game {
                             ball.position.y = paddle_y + ball.radius;
 
                             player.increment_score();
-
-                            return;
+                            ball.last_touched_by = Some(player.id);
                         }
                     }
                     Some(PlayerPosition::Bottom) => {
@@ -230,8 +229,7 @@ impl Game {
                             ball.position.y = paddle_y - ball.radius;
 
                             player.increment_score();
-
-                            return;
+                            ball.last_touched_by = Some(player.id);
                         }
                     }
                     Some(PlayerPosition::Left) => {
@@ -258,8 +256,7 @@ impl Game {
                             ball.position.x = paddle_x + ball.radius;
 
                             player.increment_score();
-
-                            return;
+                            ball.last_touched_by = Some(player.id);
                         }
                     }
                     Some(PlayerPosition::Right) => {
@@ -286,7 +283,7 @@ impl Game {
                             ball.position.x = paddle_x - ball.radius;
 
                             player.increment_score();
-                            return;
+                            ball.last_touched_by = Some(player.id);
                         }
                     }
                     None => {}

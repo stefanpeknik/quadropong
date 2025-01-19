@@ -3,12 +3,9 @@ use serde::Serialize;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::{
-    models::{Ball, GameState},
-    Game,
-};
+use crate::{models::GameState, Game};
 
-use super::PlayerDto;
+use super::{BallDto, PlayerDto};
 
 #[derive(Serialize, Clone)]
 pub struct GameDto {
@@ -16,7 +13,7 @@ pub struct GameDto {
     pub state: GameState,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub ball: Option<Ball>,
+    pub ball: Option<BallDto>,
     pub players: HashMap<Uuid, PlayerDto>,
 }
 
@@ -27,7 +24,7 @@ impl From<Game> for GameDto {
             state: game.state,
             created_at: game.created_at,
             started_at: game.started_at,
-            ball: game.ball,
+            ball: game.ball.map(|ball| BallDto::from(ball)),
             players: game
                 .players
                 .into_iter()
