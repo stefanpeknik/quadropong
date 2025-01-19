@@ -1,7 +1,7 @@
 use std::{error::Error, vec};
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Position, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, Text},
@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::{models::game::Game, ui::app::*};
+use crate::{ui::app::*, ui2::game_models::*};
 
 fn render_main_block<'a>(
     frame: &mut Frame,
@@ -121,7 +121,8 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
                         "<TAB> ".green().bold(),
                     ])
                     .centered();
-                    let block = Block::bordered().title(title.left_aligned())
+                    let block = Block::bordered()
+                        .title(title.left_aligned())
                         .title_bottom(instructions);
                     frame.render_widget(block.clone(), middle_area);
 
