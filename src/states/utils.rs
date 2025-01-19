@@ -13,7 +13,7 @@ use serde_json::from_str;
 use tokio::net::TcpStream;
 use uuid::Uuid;
 
-use crate::ui2::game_models::{game::Game, player::Player};
+use crate::game_models::{game::Game, player::Player};
 
 /// Draws the outer rectangle, renders it, and returns its Rect
 pub fn draw_outer_rectangle(

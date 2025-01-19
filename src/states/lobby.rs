@@ -1,4 +1,4 @@
-use crate::ui2::game_models::game::Game;
+use crate::game_models::game::Game;
 
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
