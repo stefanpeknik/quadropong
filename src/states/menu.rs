@@ -1,5 +1,6 @@
 use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::settings::Settings;
+use super::training::Training;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::render::{draw_inner_rectangle, draw_outer_rectangle, render_list};
 
@@ -37,10 +38,10 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new() -> Self {
+    pub fn new(selected: usize) -> Self {
         Self {
             options: Options::list(),
-            selected: 0,
+            selected: selected,
         }
     }
 }
@@ -80,7 +81,7 @@ impl Update for Menu {
                         return Ok(Some(Box::new(CreateOrJoinLobby::new())));
                     }
                     Options::Training => {
-                        // TODO
+                        return Ok(Some(Box::new(Training::new())))
                     }
                     Options::Settings => {
                         return Ok(Some(Box::new(Settings::new())));

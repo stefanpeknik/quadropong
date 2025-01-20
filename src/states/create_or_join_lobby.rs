@@ -89,7 +89,7 @@ impl Update for CreateOrJoinLobby {
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new())));
+                    return Ok(Some(Box::new(Menu::new(0))));
                 }
 
                 _ => {}

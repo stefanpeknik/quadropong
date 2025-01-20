@@ -91,7 +91,7 @@ impl Update for Lobby {
                     _ => {}
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new())));
+                    return Ok(Some(Box::new(Menu::new(0))));
                 }
                 _ => {}
             };

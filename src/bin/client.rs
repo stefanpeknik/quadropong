@@ -48,7 +48,7 @@ struct App {
 impl App {
     fn new() -> Self {
         Self {
-            current_state: Arc::new(Mutex::new(Box::new(Menu::new()))),
+            current_state: Arc::new(Mutex::new(Box::new(Menu::new(0)))),
         }
     }
 

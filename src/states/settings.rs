@@ -75,7 +75,7 @@ impl Update for Settings {
                     _ => {}
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new())));
+                    return Ok(Some(Box::new(Menu::new(2))));
                 }
                 _ => {}
             };
