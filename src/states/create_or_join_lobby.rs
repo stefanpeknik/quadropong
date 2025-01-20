@@ -14,7 +14,8 @@ use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::block::Title;
+use ratatui::widgets::{Block, Paragraph, Wrap};
 use ratatui::Frame;
 
 #[derive(Clone, PartialEq)]
@@ -32,8 +33,8 @@ impl ListEnum for Options {
 impl std::fmt::Display for Options {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Options::Create => write!(f, "Create Lobby"),
-            Options::Join => write!(f, "Join Lobby"),
+            Options::Create => write!(f, "C R E A T E  L O B B Y"),
+            Options::Join => write!(f, " J O I N  L O B B Y "),
         }
     }
 }
@@ -167,19 +168,21 @@ impl Render for CreateOrJoinLobby {
         let outer_rect = draw_outer_rectangle(
             frame,
             " quadropong ",
-            vec![" Back ".into(), "<Esc> ".blue().bold()],
+            vec![" Back ".into(), "<Esc> ".light_blue().bold()],
         );
 
         let inner_rect = draw_inner_rectangle(frame, outer_rect);
 
         let layout = Layout::vertical(vec![
             Constraint::Percentage(30),
-            Constraint::Percentage(40),
-            Constraint::Percentage(15),
-            Constraint::Percentage(15),
+            Constraint::Percentage(20),
+            Constraint::Percentage(20),
+            Constraint::Percentage(5),
+            Constraint::Percentage(20),
+            Constraint::Percentage(5),
         ]);
 
-        let [create_area, join_area, error_area, _] = layout.areas(inner_rect);
+        let [create_area, _, join_area, _, error_area, _] = layout.areas(inner_rect);
 
         // render create lobby area
         let create_area_text = if self.options[self.selected] == Options::Create {
@@ -193,20 +196,23 @@ impl Render for CreateOrJoinLobby {
         );
 
         // render join lobby area
-        let join_area_layout = Layout::horizontal(vec![
+        let block_width_layout = Layout::horizontal(vec![
             Constraint::Percentage(15),
             Constraint::Percentage(70),
             Constraint::Percentage(15),
         ]);
-        let [left_join, join_input_area, right_join] = join_area_layout.areas(join_area);
+        let [_, join_input_area, _] = block_width_layout.areas(join_area);
+        let join_area_text = if self.options[self.selected] == Options::Join {
+            Line::from(format!(" >{}< ", Options::Join)).bold().centered()
+        } else {
+            Line::from(Options::Join.to_string()).centered()
+        };
         let join_input_block = Block::bordered()
-            .title(Options::Join.to_string())
-            .title_bottom(" Join <Enter> | Paste <Tab> ");
+            .title(join_area_text)
+            .title_bottom(Line::from(vec![" Join ".into(), "<Enter>".green().bold(), " | Paste ".into(), "<TAB> ".green().bold()]).centered());
         let inner_join_input_area = join_input_block.inner(join_input_area);
         let mut style = Style::default();
         if self.options[self.selected] == Options::Join {
-            render_text_in_center_of_rect(frame, Paragraph::new(">").bold(), left_join);
-            render_text_in_center_of_rect(frame, Paragraph::new("<").bold(), right_join);
             frame.set_cursor_position(Position::new(
                 inner_join_input_area.x + self.join_lobby_input.char_index as u16, // TODO the `as` seems sus here
                 inner_join_input_area.y,
@@ -221,15 +227,15 @@ impl Render for CreateOrJoinLobby {
 
         // render error message area
         if let Some(error_message) = &self.error_message {
-            let error_layout = Layout::horizontal(vec![
-                Constraint::Percentage(10),
+            let error_layout = Layout::vertical(vec![
                 Constraint::Percentage(80),
-                Constraint::Percentage(10),
+                Constraint::Percentage(20),
             ]);
-            let [_, error_message_area, _] = error_layout.areas(error_area);
+            let [error_message_area, _] = error_layout.areas(error_area);
+            let [_, error_message_area, _] = block_width_layout.areas(error_message_area);
             frame.render_widget(
-                Paragraph::new(error_message.clone()).red().centered(),
-                evenly_distanced_rects(error_message_area, 2)[1],
+                Paragraph::new(error_message.clone()).red().centered().wrap(Wrap { trim: true }),
+                error_message_area,
             );
         }
     }

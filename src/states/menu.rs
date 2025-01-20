@@ -41,7 +41,7 @@ impl Menu {
     pub fn new(selected: usize) -> Self {
         Self {
             options: Options::list(),
-            selected: selected,
+            selected,
         }
     }
 }
@@ -102,7 +102,7 @@ impl Render for Menu {
         let outer_rect = draw_outer_rectangle(
             frame,
             " quadropong ",
-            vec![" Quit ".into(), " <Q> ".blue().bold()],
+            vec![" Quit".into(), " <Q> ".light_blue().bold(), " Up".into(), " <\u{2191}> ".light_blue().into(), " Down".into(), " <\u{2193}> ".light_blue().into()],
         );
 
         let inner_rect = draw_inner_rectangle(frame, outer_rect);
