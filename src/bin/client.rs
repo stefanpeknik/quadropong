@@ -117,16 +117,19 @@ impl App {
                     match current_state.update(input).await {
                         Ok(Some(new_state)) => {
                             if new_state.as_any().downcast_ref::<Quit>().is_some() {
+                                // We got a Quit state, stop the tasks
                                 update_running.store(false, std::sync::atomic::Ordering::Relaxed);
                             } else {
+                                // Move to the new state
                                 *current_state = new_state;
                             }
                         }
-
+                        Ok(None) => {
+                            // Do nothing as the state is unchanged
+                        }
                         Err(e) => {
                             return Err(e);
                         }
-                        _ => {}
                     }
                 }
 
