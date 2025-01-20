@@ -1,3 +1,4 @@
+use crate::game_models::client_input::{ClientInput, ClientInputType, Direction};
 use crate::game_models::game::Game;
 use crate::game_models::player::{Player, PlayerPosition};
 use crate::net::udp::UdpClient;
@@ -63,6 +64,20 @@ impl GameBoard {
             udp_client,
         }
     }
+
+    async fn send_player_move(&self, direction: Direction) -> Result<(), std::io::Error> {
+        if let Ok(game) = self.game.lock() {
+            let client_input = ClientInput::new(
+                game.id.to_string(),
+                self.our_player_id.to_string(),
+                ClientInputType::MovePaddle(direction),
+            );
+            self.udp_client
+                .send_client_input(client_input)
+                .expect("Failed to send input"); // TODO: Handle this error better
+        }
+        Ok(())
+    }
 }
 
 impl State for GameBoard {}
@@ -75,7 +90,18 @@ impl Update for GameBoard {
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
         if let Some(key_code) = key_code {
             match key_code {
-                // TODO: Handle key presses
+                KeyCode::Up | KeyCode::Char('w') => {
+                    self.send_player_move(Direction::Positive).await?;
+                }
+                KeyCode::Down | KeyCode::Char('s') => {
+                    self.send_player_move(Direction::Negative).await?;
+                }
+                KeyCode::Left | KeyCode::Char('a') => {
+                    self.send_player_move(Direction::Negative).await?;
+                }
+                KeyCode::Right | KeyCode::Char('d') => {
+                    self.send_player_move(Direction::Positive).await?;
+                }
                 KeyCode::Esc => {
                     // TODO: just a placeholder for now
                     return Ok(Some(Box::new(Menu::new(0))));
