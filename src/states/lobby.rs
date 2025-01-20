@@ -96,7 +96,7 @@ impl Update for Lobby {
                 _ => {}
             };
         }
-        Ok(Some(Box::new(self.clone())))
+        Ok(None)
     }
 }
 

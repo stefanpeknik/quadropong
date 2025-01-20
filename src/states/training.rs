@@ -80,7 +80,7 @@ impl Update for Training {
                 _ => {}
             };
         }
-        Ok(Some(Box::new(self.clone())))
+        Ok(None)
     }
 }
 

@@ -16,7 +16,7 @@ use ratatui::{
     Terminal,
 };
 
-use quadropong::states::{menu::Menu, traits::State};
+use quadropong::states::{menu::Menu, quit::Quit, traits::State};
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stderr>>, io::Error> {
     enable_raw_mode()?;
@@ -116,16 +116,17 @@ impl App {
                     // Update the state
                     match current_state.update(input).await {
                         Ok(Some(new_state)) => {
-                            // Update the state if a new state is returned
-                            *current_state = new_state;
+                            if new_state.as_any().downcast_ref::<Quit>().is_some() {
+                                update_running.store(false, std::sync::atomic::Ordering::Relaxed);
+                            } else {
+                                *current_state = new_state;
+                            }
                         }
-                        Ok(None) => {
-                            // Stop the tasks if the state returns None, which means the user wants to exit
-                            update_running.store(false, std::sync::atomic::Ordering::Relaxed);
-                        }
+
                         Err(e) => {
                             return Err(e);
                         }
+                        _ => {}
                     }
                 }
 

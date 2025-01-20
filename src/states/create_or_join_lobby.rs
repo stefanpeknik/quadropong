@@ -159,7 +159,7 @@ impl Update for CreateOrJoinLobby {
                 },
             }
         }
-        Ok(Some(Box::new(self.clone())))
+        Ok(None)
     }
 }
 
@@ -203,13 +203,21 @@ impl Render for CreateOrJoinLobby {
         ]);
         let [_, join_input_area, _] = block_width_layout.areas(join_area);
         let join_area_text = if self.options[self.selected] == Options::Join {
-            Line::from(format!(" >{}< ", Options::Join)).bold().centered()
+            Line::from(format!(" >{}< ", Options::Join))
+                .bold()
+                .centered()
         } else {
             Line::from(Options::Join.to_string()).centered()
         };
-        let join_input_block = Block::bordered()
-            .title(join_area_text)
-            .title_bottom(Line::from(vec![" Join ".into(), "<Enter>".green().bold(), " | Paste ".into(), "<TAB> ".green().bold()]).centered());
+        let join_input_block = Block::bordered().title(join_area_text).title_bottom(
+            Line::from(vec![
+                " Join ".into(),
+                "<Enter>".green().bold(),
+                " | Paste ".into(),
+                "<TAB> ".green().bold(),
+            ])
+            .centered(),
+        );
         let inner_join_input_area = join_input_block.inner(join_input_area);
         let mut style = Style::default();
         if self.options[self.selected] == Options::Join {
@@ -227,14 +235,15 @@ impl Render for CreateOrJoinLobby {
 
         // render error message area
         if let Some(error_message) = &self.error_message {
-            let error_layout = Layout::vertical(vec![
-                Constraint::Percentage(80),
-                Constraint::Percentage(20),
-            ]);
+            let error_layout =
+                Layout::vertical(vec![Constraint::Percentage(80), Constraint::Percentage(20)]);
             let [error_message_area, _] = error_layout.areas(error_area);
             let [_, error_message_area, _] = block_width_layout.areas(error_message_area);
             frame.render_widget(
-                Paragraph::new(error_message.clone()).red().centered().wrap(Wrap { trim: true }),
+                Paragraph::new(error_message.clone())
+                    .red()
+                    .centered()
+                    .wrap(Wrap { trim: true }),
                 error_message_area,
             );
         }

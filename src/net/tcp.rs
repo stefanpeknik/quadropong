@@ -1,24 +1,13 @@
 use reqwest::Client;
-use thiserror::Error;
 use uuid::Uuid;
 
 use crate::game_models::{game::Game, player::Player};
 
+use super::error::TcpError;
+
 const SERVER_ADDR: &str = "http://127.0.0.1:3000";
 
-#[derive(Debug, Error)]
-pub enum NetError {
-    #[error("Failed to send request: {0}")]
-    FailedToSendRequest(#[from] reqwest::Error),
-    #[error("Failed to read response: {0}")]
-    FailedToReadResponse(reqwest::Error),
-    #[error("Failed to deserialize response: {0}")]
-    FailedToDeserializeResponse(#[from] serde_json::Error),
-    #[error("Server returned an error: {0}")]
-    ServerError(String),
-}
-
-pub async fn create_game() -> Result<Game, NetError> {
+pub async fn create_game() -> Result<Game, TcpError> {
     let url = format!("{}/game", SERVER_ADDR);
     let client = Client::new();
 
@@ -27,11 +16,11 @@ pub async fn create_game() -> Result<Game, NetError> {
         .post(&url)
         .send()
         .await
-        .map_err(NetError::FailedToSendRequest)?;
+        .map_err(TcpError::FailedToSendRequest)?;
 
     // Check if the response status is successful
     if !response.status().is_success() {
-        return Err(NetError::ServerError(format!(
+        return Err(TcpError::ServerError(format!(
             "Server returned status code: {}",
             response.status()
         )));
@@ -41,7 +30,7 @@ pub async fn create_game() -> Result<Game, NetError> {
     let response_text = response
         .text()
         .await
-        .map_err(NetError::FailedToReadResponse)?;
+        .map_err(TcpError::FailedToReadResponse)?;
 
     // Deserialize the response and handle potential errors
     let game: Game = serde_json::from_str(&response_text)?;
@@ -49,7 +38,7 @@ pub async fn create_game() -> Result<Game, NetError> {
     Ok(game)
 }
 
-pub async fn get_game(game_id: Uuid) -> Result<Game, NetError> {
+pub async fn get_game(game_id: Uuid) -> Result<Game, TcpError> {
     let url = format!("{}/game/{}", SERVER_ADDR, game_id);
     let client = Client::new();
 
@@ -58,11 +47,11 @@ pub async fn get_game(game_id: Uuid) -> Result<Game, NetError> {
         .get(&url)
         .send()
         .await
-        .map_err(NetError::FailedToSendRequest)?;
+        .map_err(TcpError::FailedToSendRequest)?;
 
     // Check if the response status is successful
     if !response.status().is_success() {
-        return Err(NetError::ServerError(format!(
+        return Err(TcpError::ServerError(format!(
             "Server returned status code: {}",
             response.status()
         )));
@@ -72,7 +61,7 @@ pub async fn get_game(game_id: Uuid) -> Result<Game, NetError> {
     let response_text = response
         .text()
         .await
-        .map_err(NetError::FailedToReadResponse)?;
+        .map_err(TcpError::FailedToReadResponse)?;
 
     // Deserialize the response and handle potential errors
     let game: Game = serde_json::from_str(&response_text)?;
@@ -80,7 +69,7 @@ pub async fn get_game(game_id: Uuid) -> Result<Game, NetError> {
     Ok(game)
 }
 
-pub async fn join_game(game_id: Uuid) -> Result<Player, NetError> {
+pub async fn join_game(game_id: Uuid) -> Result<Player, TcpError> {
     let url = format!("{}/game/{}/join", SERVER_ADDR, game_id);
     let client = Client::new();
 
@@ -91,11 +80,11 @@ pub async fn join_game(game_id: Uuid) -> Result<Player, NetError> {
         .body("{}")
         .send()
         .await
-        .map_err(NetError::FailedToSendRequest)?;
+        .map_err(TcpError::FailedToSendRequest)?;
 
     // Check if the response status is successful
     if !response.status().is_success() {
-        return Err(NetError::ServerError(format!(
+        return Err(TcpError::ServerError(format!(
             "Server returned status code: {}",
             response.status()
         )));
@@ -105,7 +94,7 @@ pub async fn join_game(game_id: Uuid) -> Result<Player, NetError> {
     let response_text = response
         .text()
         .await
-        .map_err(NetError::FailedToReadResponse)?;
+        .map_err(TcpError::FailedToReadResponse)?;
 
     // Deserialize the response and handle potential errors
     let player: Player = serde_json::from_str(&response_text)?;

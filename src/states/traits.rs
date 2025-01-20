@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::any::Any;
 
 use crossterm::event::KeyCode;
 use ratatui::Frame;
@@ -27,7 +28,7 @@ pub trait ListEnum {
         Self: std::marker::Sized;
 }
 
-pub trait State: Render + Update + Send {
+pub trait State: Render + Update + Send + AsAny + 'static {
     // Add a method to clone the trait object
     fn clone_box(&self) -> Box<dyn State>;
 }
@@ -36,5 +37,15 @@ pub trait State: Render + Update + Send {
 impl Clone for Box<dyn State> {
     fn clone(&self) -> Self {
         self.clone_box()
+    }
+}
+
+pub trait AsAny {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: State> AsAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

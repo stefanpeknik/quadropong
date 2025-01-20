@@ -1,4 +1,5 @@
 use super::create_or_join_lobby::CreateOrJoinLobby;
+use super::quit::Quit;
 use super::settings::Settings;
 use super::training::Training;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
@@ -80,20 +81,18 @@ impl Update for Menu {
                     Options::Online => {
                         return Ok(Some(Box::new(CreateOrJoinLobby::new())));
                     }
-                    Options::Training => {
-                        return Ok(Some(Box::new(Training::new())))
-                    }
+                    Options::Training => return Ok(Some(Box::new(Training::new()))),
                     Options::Settings => {
                         return Ok(Some(Box::new(Settings::new())));
                     }
                 },
                 KeyCode::Char('q') => {
-                    return Ok(None);
+                    return Ok(Some(Box::new(Quit::new())));
                 }
                 _ => {}
             };
         }
-        Ok(Some(Box::new(self.clone())))
+        Ok(None)
     }
 }
 
@@ -102,7 +101,14 @@ impl Render for Menu {
         let outer_rect = draw_outer_rectangle(
             frame,
             " quadropong ",
-            vec![" Quit".into(), " <Q> ".light_blue().bold(), " Up".into(), " <\u{2191}> ".light_blue().into(), " Down".into(), " <\u{2193}> ".light_blue().into()],
+            vec![
+                " Quit".into(),
+                " <Q> ".light_blue().bold(),
+                " Up".into(),
+                " <\u{2191}> ".light_blue().into(),
+                " Down".into(),
+                " <\u{2193}> ".light_blue().into(),
+            ],
         );
 
         let inner_rect = draw_inner_rectangle(frame, outer_rect);
