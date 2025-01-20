@@ -66,10 +66,8 @@ impl App {
                 // Render loop
                 while render_running.load(std::sync::atomic::Ordering::Relaxed) {
                     interval.tick().await;
-                    let current_state = {
-                        let state = render_state.lock().await;
-                        state.clone() // Take a snapshot of the state (clone it) to render it
-                    };
+                    let current_state = render_state.lock().await;
+
                     terminal.draw(|f| current_state.render(f))?;
                 }
                 restore_terminal(&mut terminal)?;

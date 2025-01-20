@@ -1,7 +1,8 @@
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{draw_inner_rectangle, draw_outer_rectangle, render_list};
+use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
+use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
 use ratatui::Frame;
@@ -54,13 +55,9 @@ impl HasOptions for Settings {
     }
 }
 
-impl State for Settings {
-    fn clone_box(&self) -> Box<dyn State> {
-        Box::new(self.clone())
-    }
-}
+impl State for Settings {}
 
-#[async_trait::async_trait]
+#[async_trait]
 impl Update for Settings {
     async fn update(
         &mut self,
@@ -86,13 +83,13 @@ impl Update for Settings {
 
 impl Render for Settings {
     fn render(&self, frame: &mut Frame) {
-        let outer_rect = draw_outer_rectangle(
+        let outer_rect = render_outer_rectangle(
             frame,
             " quadropong ",
             vec![" Back ".into(), " <Esc> ".blue().bold()],
         );
 
-        let inner_rect = draw_inner_rectangle(frame, outer_rect);
+        let inner_rect = render_inner_rectangle(frame, outer_rect);
 
         render_list(
             frame,

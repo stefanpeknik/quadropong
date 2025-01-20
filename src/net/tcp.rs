@@ -7,97 +7,109 @@ use super::error::TcpError;
 
 const SERVER_ADDR: &str = "http://127.0.0.1:3000";
 
-pub async fn create_game() -> Result<Game, TcpError> {
-    let url = format!("{}/game", SERVER_ADDR);
-    let client = Client::new();
-
-    // Send the request and handle potential errors
-    let response = client
-        .post(&url)
-        .send()
-        .await
-        .map_err(TcpError::FailedToSendRequest)?;
-
-    // Check if the response status is successful
-    if !response.status().is_success() {
-        return Err(TcpError::ServerError(format!(
-            "Server returned status code: {}",
-            response.status()
-        )));
-    }
-
-    // Read the response body and handle potential errors
-    let response_text = response
-        .text()
-        .await
-        .map_err(TcpError::FailedToReadResponse)?;
-
-    // Deserialize the response and handle potential errors
-    let game: Game = serde_json::from_str(&response_text)?;
-
-    Ok(game)
+pub struct TcpClient {
+    client: Client,
 }
 
-pub async fn get_game(game_id: Uuid) -> Result<Game, TcpError> {
-    let url = format!("{}/game/{}", SERVER_ADDR, game_id);
-    let client = Client::new();
-
-    // Send the request and handle potential errors
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(TcpError::FailedToSendRequest)?;
-
-    // Check if the response status is successful
-    if !response.status().is_success() {
-        return Err(TcpError::ServerError(format!(
-            "Server returned status code: {}",
-            response.status()
-        )));
+impl TcpClient {
+    pub fn new() -> Self {
+        TcpClient {
+            client: Client::new(),
+        }
     }
 
-    // Read the response body and handle potential errors
-    let response_text = response
-        .text()
-        .await
-        .map_err(TcpError::FailedToReadResponse)?;
+    pub async fn create_game(&self) -> Result<Game, TcpError> {
+        let url = format!("{}/game", SERVER_ADDR);
 
-    // Deserialize the response and handle potential errors
-    let game: Game = serde_json::from_str(&response_text)?;
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .post(&url)
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
 
-    Ok(game)
-}
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
 
-pub async fn join_game(game_id: Uuid) -> Result<Player, TcpError> {
-    let url = format!("{}/game/{}/join", SERVER_ADDR, game_id);
-    let client = Client::new();
+        // Read the response body and handle potential errors
+        let response_text = response
+            .text()
+            .await
+            .map_err(TcpError::FailedToReadResponse)?;
 
-    // Send the request and handle potential errors
-    let response = client
-        .post(&url)
-        .header("Content-Type", "application/json")
-        .body("{}")
-        .send()
-        .await
-        .map_err(TcpError::FailedToSendRequest)?;
+        // Deserialize the response and handle potential errors
+        let game: Game = serde_json::from_str(&response_text)?;
 
-    // Check if the response status is successful
-    if !response.status().is_success() {
-        return Err(TcpError::ServerError(format!(
-            "Server returned status code: {}",
-            response.status()
-        )));
+        Ok(game)
     }
 
-    // Read the response body and handle potential errors
-    let response_text = response
-        .text()
-        .await
-        .map_err(TcpError::FailedToReadResponse)?;
+    pub async fn get_game(&self, game_id: Uuid) -> Result<Game, TcpError> {
+        let url = format!("{}/game/{}", SERVER_ADDR, game_id);
 
-    // Deserialize the response and handle potential errors
-    let player: Player = serde_json::from_str(&response_text)?;
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
 
-    Ok(player)
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
+
+        // Read the response body and handle potential errors
+        let response_text = response
+            .text()
+            .await
+            .map_err(TcpError::FailedToReadResponse)?;
+
+        // Deserialize the response and handle potential errors
+        let game: Game = serde_json::from_str(&response_text)?;
+
+        Ok(game)
+    }
+
+    pub async fn join_game(&self, game_id: Uuid) -> Result<Player, TcpError> {
+        let url = format!("{}/game/{}/join", SERVER_ADDR, game_id);
+
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .body("{}")
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
+
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
+
+        // Read the response body and handle potential errors
+        let response_text = response
+            .text()
+            .await
+            .map_err(TcpError::FailedToReadResponse)?;
+
+        // Deserialize the response and handle potential errors
+        let player: Player = serde_json::from_str(&response_text)?;
+
+        Ok(player)
+    }
 }

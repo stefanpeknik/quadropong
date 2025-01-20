@@ -22,3 +22,13 @@ pub struct ClientInput {
     pub player_id: String,
     pub action: ClientInputType,
 }
+
+impl ClientInput {
+    pub fn new(game_id: String, player_id: String, action: ClientInputType) -> Self {
+        Self {
+            game_id,
+            player_id,
+            action,
+        }
+    }
+}

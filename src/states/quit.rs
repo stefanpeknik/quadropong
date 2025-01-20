@@ -1,5 +1,6 @@
 use super::traits::{Render, State, Update};
 
+use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
@@ -12,13 +13,9 @@ impl Quit {
     }
 }
 
-impl State for Quit {
-    fn clone_box(&self) -> Box<dyn State> {
-        Box::new(self.clone())
-    }
-}
+impl State for Quit {}
 
-#[async_trait::async_trait]
+#[async_trait]
 impl Update for Quit {
     async fn update(
         &mut self,

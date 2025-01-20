@@ -1,11 +1,11 @@
-use crate::net::tcp::{create_game, get_game, join_game};
+use crate::net::tcp::TcpClient;
 
 use super::lobby::Lobby;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{
-    draw_inner_rectangle, draw_outer_rectangle, evenly_distanced_rects,
+    evenly_distanced_rects, render_inner_rectangle, render_outer_rectangle,
     render_text_in_center_of_rect,
 };
 
@@ -39,12 +39,12 @@ impl std::fmt::Display for Options {
     }
 }
 
-#[derive(Clone)]
 pub struct CreateOrJoinLobby {
     options: Vec<Options>,
     selected: usize,
     join_lobby_input: Input,
     error_message: Option<String>,
+    tcp_client: TcpClient,
 }
 
 impl CreateOrJoinLobby {
@@ -54,6 +54,7 @@ impl CreateOrJoinLobby {
             selected: 0,
             join_lobby_input: Input::new(),
             error_message: None,
+            tcp_client: TcpClient::new(),
         }
     }
 }
@@ -72,11 +73,7 @@ impl HasOptions for CreateOrJoinLobby {
     }
 }
 
-impl State for CreateOrJoinLobby {
-    fn clone_box(&self) -> Box<dyn State> {
-        Box::new(self.clone())
-    }
-}
+impl State for CreateOrJoinLobby {}
 
 #[async_trait::async_trait]
 impl Update for CreateOrJoinLobby {
@@ -98,9 +95,9 @@ impl Update for CreateOrJoinLobby {
             // match keys for the selected option
             match self.options[self.selected] {
                 Options::Create => match key_code {
-                    KeyCode::Enter => match create_game().await {
+                    KeyCode::Enter => match self.tcp_client.create_game().await {
                         // Game is created, but we need to join it to get our player id
-                        Ok(game) => match join_game(game.id).await {
+                        Ok(game) => match self.tcp_client.join_game(game.id).await {
                             // We successfully joined the game
                             Ok(our_player) => {
                                 return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
@@ -137,8 +134,12 @@ impl Update for CreateOrJoinLobby {
                     }
                     KeyCode::Enter => {
                         match uuid::Uuid::parse_str(&self.join_lobby_input.input) {
-                            Ok(inputted_game_id) => match get_game(inputted_game_id).await {
-                                Ok(game) => match join_game(game.id).await {
+                            Ok(inputted_game_id) => match self
+                                .tcp_client
+                                .get_game(inputted_game_id)
+                                .await
+                            {
+                                Ok(game) => match self.tcp_client.join_game(game.id).await {
                                     Ok(our_player) => {
                                         return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
                                     }
@@ -165,13 +166,13 @@ impl Update for CreateOrJoinLobby {
 
 impl Render for CreateOrJoinLobby {
     fn render(&self, frame: &mut Frame) {
-        let outer_rect = draw_outer_rectangle(
+        let outer_rect = render_outer_rectangle(
             frame,
             " quadropong ",
             vec![" Back ".into(), "<Esc> ".light_blue().bold()],
         );
 
-        let inner_rect = draw_inner_rectangle(frame, outer_rect);
+        let inner_rect = render_inner_rectangle(frame, outer_rect);
 
         let layout = Layout::vertical(vec![
             Constraint::Percentage(30),

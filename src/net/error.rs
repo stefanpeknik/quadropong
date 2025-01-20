@@ -1,3 +1,4 @@
+use std::str::Utf8Error;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,4 +14,15 @@ pub enum TcpError {
 }
 
 #[derive(Debug, Error)]
-pub enum UdpError {}
+pub enum UdpError {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] rmp_serde::encode::Error),
+    #[error("MessagePack deserialization error: {0}")]
+    MsgPackDeserialization(#[from] rmp_serde::decode::Error),
+    #[error("UTF-8 error: {0}")]
+    Utf8(#[from] Utf8Error),
+    #[error("Invalid source")]
+    InvalidSource,
+}

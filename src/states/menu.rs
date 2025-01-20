@@ -3,8 +3,9 @@ use super::quit::Quit;
 use super::settings::Settings;
 use super::training::Training;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{draw_inner_rectangle, draw_outer_rectangle, render_list};
+use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
+use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
 use ratatui::Frame;
@@ -61,13 +62,9 @@ impl HasOptions for Menu {
     }
 }
 
-impl State for Menu {
-    fn clone_box(&self) -> Box<dyn State> {
-        Box::new(self.clone())
-    }
-}
+impl State for Menu {}
 
-#[async_trait::async_trait]
+#[async_trait]
 impl Update for Menu {
     async fn update(
         &mut self,
@@ -98,7 +95,7 @@ impl Update for Menu {
 
 impl Render for Menu {
     fn render(&self, frame: &mut Frame) {
-        let outer_rect = draw_outer_rectangle(
+        let outer_rect = render_outer_rectangle(
             frame,
             " quadropong ",
             vec![
@@ -111,7 +108,7 @@ impl Render for Menu {
             ],
         );
 
-        let inner_rect = draw_inner_rectangle(frame, outer_rect);
+        let inner_rect = render_inner_rectangle(frame, outer_rect);
 
         render_list(
             frame,

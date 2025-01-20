@@ -2,17 +2,23 @@ use std::rc::Rc;
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Position, Rect},
-    style::{Modifier, Style, Stylize},
+    style::{Color, Modifier, Style, Stylize},
     symbols::border,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
+use uuid::Uuid;
+
+use crate::game_models::{
+    ball::Ball,
+    player::{Player, PlayerPosition},
+};
 
 const SERVER_GAME_BOARD_SIZE: f32 = 10.0;
 
 /// Draws the outer rectangle, renders it, and returns its Rect
-pub fn draw_outer_rectangle(
+pub fn render_outer_rectangle(
     frame: &mut Frame,
     title_text: &str,
     instructions_text: Vec<Span>,
@@ -32,7 +38,7 @@ pub fn draw_outer_rectangle(
 }
 
 /// Draws the inner rectangle, renders it, and returns its Rect
-pub fn draw_inner_rectangle(frame: &mut Frame, outer_rect: Rect) -> Rect {
+pub fn render_inner_rectangle(frame: &mut Frame, outer_rect: Rect) -> Rect {
     // Calculate the inner rectangle with 40% spacing on each side
     let inner_rect = centered_rect(outer_rect, 60, 60);
 
@@ -83,7 +89,7 @@ pub fn render_text_in_center_of_rect(frame: &mut Frame, text: Paragraph, rect: R
 }
 
 /// Helper function to calculate a centered rectangle with given horizontal and vertical percentages
-fn centered_rect(area: Rect, horizontal_percent: u16, vertical_percent: u16) -> Rect {
+pub fn centered_rect(area: Rect, horizontal_percent: u16, vertical_percent: u16) -> Rect {
     let horizontal =
         Layout::horizontal([Constraint::Percentage(horizontal_percent)]).flex(Flex::Center);
     let vertical = Layout::vertical([Constraint::Percentage(vertical_percent)]).flex(Flex::Center);
@@ -91,4 +97,135 @@ fn centered_rect(area: Rect, horizontal_percent: u16, vertical_percent: u16) -> 
     let [rect] = horizontal.areas(rect);
 
     rect
+}
+/// Helper function to calculate the game area and scaling factors
+pub fn calculate_game_area(frame: &Frame) -> (Rect, f32, f32) {
+    let terminal_size = frame.size();
+    let game_area_width = terminal_size.width.min(terminal_size.height);
+    let game_area = Rect {
+        x: (terminal_size.width - game_area_width) / 2,
+        y: (terminal_size.height - game_area_width) / 2,
+        width: game_area_width,
+        height: game_area_width,
+    };
+    let scale_x = game_area.width as f32 / 10.0;
+    let scale_y = game_area.height as f32 / 10.0;
+    (game_area, scale_x, scale_y)
+}
+
+/// Render all players
+pub fn render_players(
+    players: &[&Player],
+    our_player: Uuid,
+    frame: &mut Frame,
+    game_area: &Rect,
+    scale_x: f32,
+    scale_y: f32,
+) {
+    for player in players {
+        render_player(
+            player,
+            player.id == our_player,
+            frame,
+            game_area,
+            scale_x,
+            scale_y,
+        );
+    }
+}
+
+/// Render a single player's paddle
+pub fn render_player(
+    player: &Player,
+    is_our_player: bool,
+    frame: &mut Frame,
+    game_area: &Rect,
+    scale_x: f32,
+    scale_y: f32,
+) {
+    // Calculate paddle dimensions and position
+    let paddle_length = (player.paddle_width * 2.0 * scale_x) as u16;
+    let paddle_thickness = 1; // Paddle depth is 1 character
+    let paddle_center = (player.paddle_position * scale_x) as u16;
+
+    let player_style = if is_our_player {
+        Style::default().fg(Color::Green)
+    } else {
+        Style::default().fg(Color::White)
+    };
+
+    // Determine paddle position based on player side
+    match player.position {
+        Some(PlayerPosition::Top) => {
+            let paddle_x = game_area.x + paddle_center - paddle_length / 2;
+            let paddle_y = game_area.y;
+            frame.render_widget(
+                Paragraph::new("─".repeat(paddle_length as usize)).style(player_style),
+                Rect {
+                    x: paddle_x,
+                    y: paddle_y,
+                    width: paddle_length,
+                    height: paddle_thickness,
+                },
+            );
+        }
+        Some(PlayerPosition::Bottom) => {
+            let paddle_x = game_area.x + paddle_center - paddle_length / 2;
+            let paddle_y = game_area.y + game_area.height - paddle_thickness;
+            frame.render_widget(
+                Paragraph::new("─".repeat(paddle_length as usize)).style(player_style),
+                Rect {
+                    x: paddle_x,
+                    y: paddle_y,
+                    width: paddle_length,
+                    height: paddle_thickness,
+                },
+            );
+        }
+        Some(PlayerPosition::Left) => {
+            let paddle_x = game_area.x;
+            let paddle_y = game_area.y + paddle_center - paddle_length / 2;
+            frame.render_widget(
+                Paragraph::new("│".repeat(paddle_length as usize)).style(player_style),
+                Rect {
+                    x: paddle_x,
+                    y: paddle_y,
+                    width: paddle_thickness,
+                    height: paddle_length,
+                },
+            );
+        }
+        Some(PlayerPosition::Right) => {
+            let paddle_x = game_area.x + game_area.width - paddle_thickness;
+            let paddle_y = game_area.y + paddle_center - paddle_length / 2;
+            frame.render_widget(
+                Paragraph::new("│".repeat(paddle_length as usize)).style(player_style),
+                Rect {
+                    x: paddle_x,
+                    y: paddle_y,
+                    width: paddle_thickness,
+                    height: paddle_length,
+                },
+            );
+        }
+        None => {}
+    }
+}
+
+/// Render the ball
+pub fn render_ball(ball: &Ball, frame: &mut Frame, game_area: &Rect, scale_x: f32, scale_y: f32) {
+    // Calculate ball position in terminal coordinates
+    let ball_x = game_area.x + (ball.position.x * scale_x) as u16;
+    let ball_y = game_area.y + (ball.position.y * scale_y) as u16;
+
+    // Render the ball as a single character
+    frame.render_widget(
+        Paragraph::new("●").style(Style::default().fg(Color::White)),
+        Rect {
+            x: ball_x,
+            y: ball_y,
+            width: 1,
+            height: 1,
+        },
+    );
 }
