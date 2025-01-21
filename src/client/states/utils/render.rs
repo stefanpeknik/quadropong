@@ -1,19 +1,15 @@
 use std::rc::Rc;
 
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Position, Rect},
-    style::{Color, Modifier, Style, Stylize},
-    symbols::border,
+    layout::{Constraint, Flex, Layout, Rect},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
 use uuid::Uuid;
 
-use crate::common::{
-    models::{Ball, PlayerPosition},
-    Player,
-};
+use crate::common::models::{BallDto, PlayerDto, PlayerPosition};
 
 const SERVER_GAME_BOARD_SIZE: f32 = 10.0;
 
@@ -108,14 +104,14 @@ pub fn calculate_game_area(frame: &Frame) -> (Rect, f32, f32) {
         width: game_area_width,
         height: game_area_width,
     };
-    let scale_x = game_area.width as f32 / 10.0;
-    let scale_y = game_area.height as f32 / 10.0;
+    let scale_x = game_area.width as f32 / SERVER_GAME_BOARD_SIZE;
+    let scale_y = game_area.height as f32 / SERVER_GAME_BOARD_SIZE;
     (game_area, scale_x, scale_y)
 }
 
 /// Render all players
 pub fn render_players(
-    players: &[&Player],
+    players: &[&PlayerDto],
     our_player: Uuid,
     frame: &mut Frame,
     game_area: &Rect,
@@ -136,7 +132,7 @@ pub fn render_players(
 
 /// Render a single player's paddle
 pub fn render_player(
-    player: &Player,
+    player: &PlayerDto,
     is_our_player: bool,
     frame: &mut Frame,
     game_area: &Rect,
@@ -213,7 +209,13 @@ pub fn render_player(
 }
 
 /// Render the ball
-pub fn render_ball(ball: &Ball, frame: &mut Frame, game_area: &Rect, scale_x: f32, scale_y: f32) {
+pub fn render_ball(
+    ball: &BallDto,
+    frame: &mut Frame,
+    game_area: &Rect,
+    scale_x: f32,
+    scale_y: f32,
+) {
     // Calculate ball position in terminal coordinates
     let ball_x = game_area.x + (ball.position.x * scale_x) as u16;
     let ball_y = game_area.y + (ball.position.y * scale_y) as u16;

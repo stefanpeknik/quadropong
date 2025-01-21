@@ -6,16 +6,13 @@ use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{
     evenly_distanced_rects, render_inner_rectangle, render_outer_rectangle,
-    render_text_in_center_of_rect,
 };
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
-use ratatui::symbols::block;
 use ratatui::text::Line;
-use ratatui::widgets::block::Title;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 use ratatui::Frame;
 

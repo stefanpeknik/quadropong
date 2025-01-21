@@ -1,18 +1,12 @@
 use crate::client::net::udp::UdpClient;
-use crate::common::models::{ClientInput, ClientInputType, Direction};
-use crate::common::{Game, Player};
+use crate::common::models::{ClientInput, ClientInputType, Direction, GameDto, PlayerDto};
 
 use super::menu::Menu;
-use super::traits::{HasOptions, Render, State, Update};
-use super::utils::render::{
-    calculate_game_area, render_ball, render_inner_rectangle, render_list, render_outer_rectangle,
-    render_players,
-};
+use super::traits::{Render, State, Update};
+use super::utils::render::{calculate_game_area, render_ball, render_players};
 
 use crossterm::event::KeyCode;
-use ratatui::layout::Rect;
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::Block;
 use ratatui::Frame;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -26,7 +20,7 @@ enum Options {
 }
 
 pub struct GameBoard {
-    game: Arc<Mutex<Game>>,
+    game: Arc<Mutex<GameDto>>,
     our_player_id: Uuid,
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
@@ -34,7 +28,7 @@ pub struct GameBoard {
 }
 
 impl GameBoard {
-    pub fn new(game: Game, our_player_id: Uuid, udp_client: Arc<UdpClient>) -> Self {
+    pub fn new(game: GameDto, our_player_id: Uuid, udp_client: Arc<UdpClient>) -> Self {
         let game = Arc::new(Mutex::new(game));
         let receive_updates = Arc::new(AtomicBool::new(true));
         let receive_updates_clone = Arc::clone(&receive_updates);
@@ -129,7 +123,7 @@ impl Render for GameBoard {
             frame.render_widget(block, game_area);
 
             // Render players
-            let players: Vec<&Player> = game.players.values().collect();
+            let players: Vec<&PlayerDto> = game.players.values().collect();
             render_players(
                 &players,
                 self.our_player_id,
@@ -144,5 +138,12 @@ impl Render for GameBoard {
                 render_ball(ball, frame, &game_area, scale_x, scale_y);
             }
         }
+    }
+}
+
+impl Drop for GameBoard {
+    fn drop(&mut self) {
+        self.receive_updates.store(false, Ordering::Relaxed);
+        self.receive_update_handle.abort();
     }
 }
