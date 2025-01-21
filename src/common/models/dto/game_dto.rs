@@ -1,5 +1,5 @@
 use chrono;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -7,7 +7,7 @@ use crate::common::{models::GameState, Game};
 
 use super::{BallDto, PlayerDto};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct GameDto {
     pub id: Uuid,
     pub state: GameState,

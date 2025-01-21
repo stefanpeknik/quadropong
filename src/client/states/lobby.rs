@@ -2,14 +2,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::net::udp::UdpClient;
-use crate::common::models::{ClientInput, ClientInputType};
+use crate::common::models::{ClientInput, ClientInputType, GameDto};
 use crate::common::Game;
 
 use super::game_board::GameBoard;
 use super::menu::Menu;
-use super::quit::Quit;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
+use super::utils::render::{render_list, render_outer_rectangle};
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::KeyCode;
@@ -41,7 +40,7 @@ impl std::fmt::Display for Options {
 pub struct Lobby {
     options: Vec<Options>,
     selected: usize,
-    game: Arc<Mutex<Game>>,
+    game: Arc<Mutex<GameDto>>,
     our_player_id: Uuid,
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
@@ -63,7 +62,7 @@ impl Lobby {
             .expect("Failed to send introduction message"); // TODO: Handle this error
 
         let receive_updates = Arc::new(AtomicBool::new(true));
-        let game = Arc::new(Mutex::new(game));
+        let game = Arc::new(Mutex::new(GameDto::from(game)));
 
         // Start a task to receive updates
         let udp_client_clone = Arc::clone(&udp_client);

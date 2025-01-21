@@ -1,8 +1,8 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use crate::common::models::{ball::Vec2, Ball};
 
-#[derive(Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct BallDto {
     pub position: Vec2,
     pub velocity: Vec2,

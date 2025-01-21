@@ -7,6 +7,7 @@ mod player;
 
 pub use ball::Ball;
 pub use client_input::{ClientInput, ClientInputType, ClientInputWithAddr, Direction};
+pub use dto::{BallDto, GameDto, PlayerDto};
 pub use game::{Game, GameState};
 pub use game_rooms::GameRooms;
 pub use player::Player;

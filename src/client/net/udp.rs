@@ -1,8 +1,7 @@
 use std::net::UdpSocket;
 use std::time::Duration;
 
-use crate::common::models::ClientInput;
-use crate::common::Game;
+use crate::common::models::{ClientInput, GameDto};
 
 use super::error::UdpError;
 
@@ -26,13 +25,13 @@ impl UdpClient {
         Ok(())
     }
 
-    pub fn recv_updated_game(&self) -> Result<Game, UdpError> {
+    pub fn recv_updated_game(&self) -> Result<GameDto, UdpError> {
         let mut buf = [0; 1024];
         let (len, addr) = self.socket.recv_from(&mut buf)?;
         if addr.to_string() != SERVER_ADDR {
             return Err(UdpError::InvalidSource);
         }
-        let game: Game = rmp_serde::from_slice(&buf[..len])?;
+        let game: GameDto = rmp_serde::from_slice(&buf[..len])?;
         Ok(game)
     }
 }

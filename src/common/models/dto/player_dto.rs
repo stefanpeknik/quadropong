@@ -1,9 +1,11 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::common::{models::player::PlayerPosition, Player};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PlayerDto {
+    pub id: Uuid,
     pub name: String,
     pub score: u32,
     pub position: Option<PlayerPosition>,
@@ -15,6 +17,7 @@ pub struct PlayerDto {
 impl From<Player> for PlayerDto {
     fn from(player: Player) -> Self {
         PlayerDto {
+            id: player.id,
             name: player.name,
             score: player.score,
             position: player.position,
