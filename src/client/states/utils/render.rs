@@ -10,9 +10,9 @@ use ratatui::{
 };
 use uuid::Uuid;
 
-use crate::game_models::{
-    ball::Ball,
-    player::{Player, PlayerPosition},
+use crate::common::{
+    models::{Ball, PlayerPosition},
+    Player,
 };
 
 const SERVER_GAME_BOARD_SIZE: f32 = 10.0;

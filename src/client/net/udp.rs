@@ -1,7 +1,8 @@
 use std::net::UdpSocket;
 use std::time::Duration;
 
-use crate::game_models::{client_input::ClientInput, game::Game};
+use crate::common::models::ClientInput;
+use crate::common::Game;
 
 use super::error::UdpError;
 

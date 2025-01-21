@@ -1,7 +1,6 @@
-use crate::game_models::client_input::{ClientInput, ClientInputType, Direction};
-use crate::game_models::game::Game;
-use crate::game_models::player::{Player, PlayerPosition};
-use crate::net::udp::UdpClient;
+use crate::client::net::udp::UdpClient;
+use crate::common::models::{ClientInput, ClientInputType, Direction};
+use crate::common::{Game, Player};
 
 use super::menu::Menu;
 use super::traits::{HasOptions, Render, State, Update};

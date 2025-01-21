@@ -1,4 +1,4 @@
-use crate::net::tcp::TcpClient;
+use crate::client::net::tcp::TcpClient;
 
 use super::lobby::Lobby;
 use super::menu::Menu;

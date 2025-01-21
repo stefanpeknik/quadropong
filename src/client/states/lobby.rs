@@ -1,9 +1,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::game_models::client_input::{ClientInput, ClientInputType};
-use crate::game_models::game::Game;
-use crate::net::udp::UdpClient;
+use crate::client::net::udp::UdpClient;
+use crate::common::models::{ClientInput, ClientInputType};
+use crate::common::Game;
 
 use super::game_board::GameBoard;
 use super::menu::Menu;

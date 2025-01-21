@@ -1,6 +1,8 @@
+use std::net::SocketAddr;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Serialize, Debug, Deserialize)]
 pub enum ClientInputType {
     JoinGame,
     LeaveGame,
@@ -31,4 +33,9 @@ impl ClientInput {
             action,
         }
     }
+}
+
+pub struct ClientInputWithAddr {
+    pub addr: SocketAddr,
+    pub input: ClientInput,
 }

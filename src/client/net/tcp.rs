@@ -1,7 +1,7 @@
 use reqwest::Client;
 use uuid::Uuid;
 
-use crate::game_models::{game::Game, player::Player};
+use crate::common::{Game, Player};
 
 use super::error::TcpError;
 
