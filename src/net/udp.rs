@@ -1,0 +1,37 @@
+use std::net::UdpSocket;
+use std::time::Duration;
+
+use crate::game_models::{client_input::ClientInput, game::Game};
+
+use super::error::UdpError;
+
+const SERVER_ADDR: &str = "127.0.0.1:34254";
+
+pub struct UdpClient {
+    socket: UdpSocket,
+}
+
+impl UdpClient {
+    pub fn new() -> Result<Self, UdpError> {
+        let socket = UdpSocket::bind("0.0.0.0:0")?;
+        socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+        socket.set_write_timeout(Some(Duration::from_secs(5)))?;
+        Ok(Self { socket })
+    }
+
+    pub fn send_client_input(&self, client_input: ClientInput) -> Result<(), UdpError> {
+        let serialized = rmp_serde::to_vec(&client_input)?;
+        self.socket.send_to(&serialized, SERVER_ADDR)?;
+        Ok(())
+    }
+
+    pub fn recv_updated_game(&self) -> Result<Game, UdpError> {
+        let mut buf = [0; 1024];
+        let (len, addr) = self.socket.recv_from(&mut buf)?;
+        if addr.to_string() != SERVER_ADDR {
+            return Err(UdpError::InvalidSource);
+        }
+        let game: Game = rmp_serde::from_slice(&buf[..len])?;
+        Ok(game)
+    }
+}
