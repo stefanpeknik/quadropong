@@ -8,7 +8,7 @@ use super::utils::render::{
     evenly_distanced_rects, render_inner_rectangle, render_outer_rectangle,
 };
 
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
@@ -124,8 +124,8 @@ impl Update for CreateOrJoinLobby {
                         self.join_lobby_input.delete_char();
                     }
                     KeyCode::Tab => {
-                        if let Ok(mut ctx) = ClipboardContext::new() {
-                            if let Ok(clipboard_content) = ctx.get_contents() {
+                        if let Ok(mut clipboard) = Clipboard::new() {
+                            if let Ok(clipboard_content) = clipboard.get_text() {
                                 self.join_lobby_input.insert_clipboard(clipboard_content);
                             }
                         }
@@ -167,7 +167,14 @@ impl Render for CreateOrJoinLobby {
         let outer_rect = render_outer_rectangle(
             frame,
             " quadropong ",
-            vec![" Back ".into(), "<Esc> ".light_blue().bold()],
+            vec![
+                " Back".into(),
+                " <Esc> ".light_blue().bold(),
+                "| Up".into(),
+                " <\u{2191}> ".light_blue().into(),
+                "| Down".into(),
+                " <\u{2193}> ".light_blue().into(),
+            ],
         );
 
         let inner_rect = render_inner_rectangle(frame, outer_rect);

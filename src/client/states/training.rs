@@ -85,8 +85,15 @@ impl Render for Training {
     fn render(&self, frame: &mut Frame) {
         let outer_rect = render_outer_rectangle(
             frame,
-            " quadropong ",
-            vec![" Back ".into(), " <Esc> ".blue().bold()],
+            " quadropong - Training ",
+            vec![
+                " Back".into(),
+                " <Esc> ".light_blue().bold(),
+                "| Up".into(),
+                " <\u{2191}> ".light_blue().into(),
+                "| Down".into(),
+                " <\u{2193}> ".light_blue().into(),
+            ],
         );
 
         let inner_rect = render_inner_rectangle(frame, outer_rect);

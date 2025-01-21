@@ -101,9 +101,9 @@ impl Render for Menu {
             vec![
                 " Quit".into(),
                 " <Q> ".light_blue().bold(),
-                " Up".into(),
+                "| Up".into(),
                 " <\u{2191}> ".light_blue().into(),
-                " Down".into(),
+                "| Down".into(),
                 " <\u{2193}> ".light_blue().into(),
             ],
         );

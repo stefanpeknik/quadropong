@@ -5,12 +5,13 @@ use crate::client::net::udp::UdpClient;
 use crate::common::models::{ClientInput, ClientInputType, GameDto};
 use crate::common::Game;
 
+use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::game_board::GameBoard;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::render::{render_list, render_outer_rectangle};
 
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Margin};
 use ratatui::style::Stylize;
@@ -126,9 +127,9 @@ impl Update for Lobby {
             match key_code {
                 KeyCode::Tab => {
                     // copy game id to clipboard
-                    if let Ok(mut ctx) = ClipboardContext::new() {
+                    if let Ok(mut clipboard) = Clipboard::new() {
                         if let Ok(game) = self.game.lock() {
-                            if let Ok(_clipboard_content) = ctx.set_contents(game.id.to_string()) {
+                            if let Ok(_clipboard_content) = clipboard.set_text(game.id.to_string()) {
                                 // TODO
                             }
                         }
@@ -151,7 +152,7 @@ impl Update for Lobby {
                     }
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(0))));
+                    return Ok(Some(Box::new(CreateOrJoinLobby::new())));
                 }
                 _ => {}
             };
@@ -165,7 +166,7 @@ impl Render for Lobby {
         let outer_rect = render_outer_rectangle(
             frame,
             " quadropong - Lobby ",
-            vec![" Back ".into(), " <Esc> ".light_blue().bold()],
+            vec![" Leave Game ".into(), "<Esc> ".light_blue().bold(), "| Start Game ".into(), "<Space> ".light_blue().bold()],
         );
         let inner_rect = outer_rect.inner(Margin {
             horizontal: 2,
@@ -188,7 +189,7 @@ impl Render for Lobby {
 
             // render lobby ID
             let lobby_id_block = Block::bordered().title_bottom(
-                Line::from(vec![" Copy ID ".into(), "<C> ".green().bold()]).right_aligned(),
+                Line::from(vec![" Copy ".into(), "<TAB> ".green().bold()]).right_aligned(),
             );
             let inner_lobby_id_area = lobby_id_block.inner(lobby_id_area);
             let lobby_id_paragraph = Paragraph::new(format!(" Game ID - {}", game.id.to_string()));
