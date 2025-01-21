@@ -13,7 +13,7 @@ use super::utils::render::{
 use crossterm::event::KeyCode;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style, Stylize};
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -124,6 +124,10 @@ impl Render for GameBoard {
         if let Ok(game) = self.game.lock() {
             // Calculate the game area and scaling factors once
             let (game_area, scale_x, scale_y) = calculate_game_area(frame);
+
+            let block = Block::bordered();
+
+            frame.render_widget(block, game_area);
 
             // Render players
             let players: Vec<&Player> = game.players.values().collect();

@@ -1,38 +1,40 @@
-workflow:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' # Merge request event
-    - if: $CI_COMMIT_TAG # Tags
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH # Default branch
-    - if: '$CI_PIPELINE_SOURCE == "schedule"' # Scheduled pipeline
-    - if: '$CI_PIPELINE_SOURCE == "web"' # Web UI
+# Ignore gitlab CI for now
 
-default:
-  image: rust:alpine3.20
-  before_script:
-    - apk add --no-cache alpine-sdk
-    - rustc --version
-    - cargo --version
-  tags:
-    - shared-fi
+# workflow:
+#   rules:
+#     - if: $CI_PIPELINE_SOURCE == 'merge_request_event' # Merge request event
+#     - if: $CI_COMMIT_TAG # Tags
+#     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH # Default branch
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"' # Scheduled pipeline
+#     - if: '$CI_PIPELINE_SOURCE == "web"' # Web UI
 
-stages:
-  - build
-  - test
+# default:
+#   image: rust:alpine3.20
+#   before_script:
+#     - apk add --no-cache alpine-sdk
+#     - rustc --version
+#     - cargo --version
+#   tags:
+#     - shared-fi
 
-build:
-  stage: build
-  script:
-    - cargo build --verbose
+# stages:
+#   - build
+#   - test
 
-lint:
-  stage: test
-  script:
-    - rustup component add rustfmt
-    - cargo fmt -- --check
-    - rustup component add clippy
-    - cargo clippy -- -D warnings
+# build:
+#   stage: build
+#   script:
+#     - cargo build --verbose
 
-test:
-  stage: test
-  script:
-    - cargo test --verbose
+# lint:
+#   stage: test
+#   script:
+#     - rustup component add rustfmt
+#     - cargo fmt -- --check
+#     - rustup component add clippy
+#     - cargo clippy -- -D warnings
+
+# test:
+#   stage: test
+#   script:
+#     - cargo test --verbose

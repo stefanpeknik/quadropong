@@ -100,7 +100,7 @@ pub fn centered_rect(area: Rect, horizontal_percent: u16, vertical_percent: u16)
 }
 /// Helper function to calculate the game area and scaling factors
 pub fn calculate_game_area(frame: &Frame) -> (Rect, f32, f32) {
-    let terminal_size = frame.size();
+    let terminal_size = frame.area();
     let game_area_width = terminal_size.width.min(terminal_size.height);
     let game_area = Rect {
         x: (terminal_size.width - game_area_width) / 2,
