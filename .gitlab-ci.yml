@@ -44,5 +44,7 @@ stages:
 
 success:
   stage: test
+  tags:
+    - shared-fi
   script:
     - echo "This pipeline always succeeds"
