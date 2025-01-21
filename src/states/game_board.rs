@@ -4,7 +4,7 @@ use crate::game_models::player::{Player, PlayerPosition};
 use crate::net::udp::UdpClient;
 
 use super::menu::Menu;
-use super::traits::{Render, State, Update};
+use super::traits::{HasOptions, Render, State, Update};
 use super::utils::render::{
     calculate_game_area, render_ball, render_inner_rectangle, render_list, render_outer_rectangle,
     render_players,
@@ -19,6 +19,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
+
+enum Options {
+    Active,
+    Paused,
+    Finished,
+}
 
 pub struct GameBoard {
     game: Arc<Mutex<Game>>,
