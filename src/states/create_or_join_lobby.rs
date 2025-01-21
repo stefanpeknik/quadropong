@@ -13,6 +13,7 @@ use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
+use ratatui::symbols::block;
 use ratatui::text::Line;
 use ratatui::widgets::block::Title;
 use ratatui::widgets::{Block, Paragraph, Wrap};
@@ -177,7 +178,7 @@ impl Render for CreateOrJoinLobby {
         let layout = Layout::vertical(vec![
             Constraint::Percentage(30),
             Constraint::Percentage(20),
-            Constraint::Percentage(20),
+            Constraint::Length(3),
             Constraint::Percentage(5),
             Constraint::Percentage(20),
             Constraint::Percentage(5),
@@ -196,12 +197,13 @@ impl Render for CreateOrJoinLobby {
             evenly_distanced_rects(create_area, 2)[1],
         );
 
-        // render join lobby area
         let block_width_layout = Layout::horizontal(vec![
             Constraint::Percentage(15),
             Constraint::Percentage(70),
             Constraint::Percentage(15),
         ]);
+
+        // render join lobby area
         let [_, join_input_area, _] = block_width_layout.areas(join_area);
         let join_area_text = if self.options[self.selected] == Options::Join {
             Line::from(format!(" >{}< ", Options::Join))

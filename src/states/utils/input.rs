@@ -13,6 +13,10 @@ impl Input {
         }
     }
 
+    fn remove_whitespace(s: &mut String) {
+        s.retain(|c| !c.is_whitespace());
+    }
+
     pub fn move_left(&mut self) {
         let cursor_left = self.char_index.saturating_sub(1);
         self.char_index = cursor_left;
@@ -35,7 +39,8 @@ impl Input {
         self.move_right();
     }
 
-    pub fn insert_clipboard(&mut self, new_string: String) {
+    pub fn insert_clipboard(&mut self, mut new_string: String) {
+        Self::remove_whitespace(&mut new_string);
         self.input.insert_str(self.char_index, &new_string);
         self.move_right_multiple(new_string.chars().count());
     }

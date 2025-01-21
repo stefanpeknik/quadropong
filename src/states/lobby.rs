@@ -7,11 +7,16 @@ use crate::net::udp::UdpClient;
 
 use super::game_board::GameBoard;
 use super::menu::Menu;
+use super::quit::Quit;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::KeyCode;
+use ratatui::layout::{Constraint, Layout, Margin};
 use ratatui::style::Stylize;
+use ratatui::text::Line;
+use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 use uuid::Uuid;
 
@@ -120,6 +125,16 @@ impl Update for Lobby {
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
         if let Some(key_code) = key_code {
             match key_code {
+                KeyCode::Tab => {
+                    // copy game id to clipboard
+                    if let Ok(mut ctx) = ClipboardContext::new() {
+                        if let Ok(game) = self.game.lock() {
+                            if let Ok(_clipboard_content) = ctx.set_contents(game.id.to_string()) {
+                                // TODO
+                            }
+                        }
+                    }
+                }
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
                 KeyCode::Enter => match self.options[self.selected] {
@@ -150,14 +165,19 @@ impl Render for Lobby {
     fn render(&self, frame: &mut Frame) {
         let outer_rect = render_outer_rectangle(
             frame,
-            " quadropong ",
-            vec![" Back ".into(), " <Esc> ".blue().bold()],
+            " quadropong - Lobby ",
+            vec![" Back ".into(), " <Esc> ".light_blue().bold()],
         );
+        let inner_rect = outer_rect.inner(Margin {
+            horizontal: 2,
+            vertical: 1,
+        });
 
-        let inner_rect = render_inner_rectangle(frame, outer_rect);
+        let layout = Layout::vertical(vec![Constraint::Length(3), Constraint::Percentage(90)]);
+        let [lobby_id_area, _] = layout.areas(inner_rect);
 
         if let Ok(game) = self.game.lock() {
-            let mut list = vec![game.id.to_string()];
+            let mut list = vec![];
             let mut players: Vec<_> = game
                 .players
                 .iter()
@@ -167,7 +187,21 @@ impl Render for Lobby {
             list.extend(players);
             list.push(format!("You: {}", self.our_player_id));
 
-            render_list(frame, &list, self.selected, inner_rect);
+            // render lobby ID
+            let lobby_id_block = Block::bordered().title_bottom(
+                Line::from(vec![" Copy ID ".into(), "<C> ".green().bold()]).right_aligned(),
+            );
+            let inner_lobby_id_area = lobby_id_block.inner(lobby_id_area);
+            let lobby_id_paragraph = Paragraph::new(format!(" Game ID - {}", game.id.to_string()));
+            frame.render_widget(lobby_id_paragraph, inner_lobby_id_area);
+            frame.render_widget(lobby_id_block, lobby_id_area);
+
+            render_list(
+                frame,
+                &list,
+                self.selected,
+                outer_rect.inner(Margin::new(5, 5)),
+            );
         }
     }
 }

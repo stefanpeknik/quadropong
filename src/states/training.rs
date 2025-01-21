@@ -1,6 +1,6 @@
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_inner_rectangle, render_outer_rectangle, render_list};
+use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
