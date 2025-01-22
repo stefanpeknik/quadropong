@@ -1,12 +1,13 @@
 use std::rc::Rc;
 
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
-    style::{Color, Style, Stylize},
+    layout::{Constraint, Flex, Layout, Margin, Rect},
+    style::Stylize,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
+
 use uuid::Uuid;
 
 use crate::common::models::{BallDto, PlayerDto, PlayerPosition};
@@ -52,12 +53,10 @@ pub fn render_inner_rectangle(frame: &mut Frame, outer_rect: Rect) -> Rect {
 
 /// Helper function to calculate evenly distributed rectangles within a given rectangle
 pub fn evenly_distanced_rects(rect: Rect, num_rects: usize) -> Rc<[Rect]> {
-    let vertical = Layout::vertical(
+    Layout::vertical(
         std::iter::repeat(Constraint::Percentage(100 / num_rects as u16)).take(num_rects),
     )
-    .split(rect);
-
-    vertical
+    .split(rect)
 }
 
 /// Renders a list of strings evenly distributed and centered within a rectangle.
@@ -109,25 +108,63 @@ pub fn centered_rect(area: Rect, horizontal_percent: u16, vertical_percent: u16)
 
     rect
 }
+
+/// Helper function to scale dimensions such that width is exactly 2 times height,
+/// while ensuring neither exceeds the original dimensions.
+fn scale_dimensions(original_height: u16, original_width: u16) -> (u16, u16) {
+    // Target ratio is width = 2 * height
+    let target_ratio = 2;
+
+    // Calculate the maximum possible height and width based on the original dimensions
+    let max_height = original_height;
+    let max_width = original_width;
+
+    // Calculate the height and width that satisfy width = 2 * height
+    // while ensuring neither exceeds the original dimensions
+    let new_height = max_height.min(max_width / target_ratio);
+    let new_width = target_ratio * new_height;
+
+    (new_height, new_width)
+}
+
 /// Helper function to calculate the game area and scaling factors
-pub fn calculate_game_area(frame: &Frame) -> (Rect, f32, f32) {
+pub fn calculate_game_area(frame: &Frame) -> (Rect, Rect, f32, f32) {
     let terminal_size = frame.area();
-    let game_area_width = terminal_size.width.min(terminal_size.height);
-    let game_area = Rect {
-        x: (terminal_size.width - game_area_width) / 2,
-        y: (terminal_size.height - game_area_width) / 2,
-        width: game_area_width,
-        height: game_area_width,
+    let (game_area_bounding_box_height, game_area_bounding_box_width) =
+        scale_dimensions(terminal_size.height, terminal_size.width);
+
+    let game_area_bounding_box = Rect {
+        x: terminal_size.x.saturating_add(
+            (terminal_size
+                .width
+                .saturating_sub(game_area_bounding_box_width))
+                / 2,
+        ),
+        y: terminal_size.y.saturating_add(
+            (terminal_size
+                .height
+                .saturating_sub(game_area_bounding_box_height))
+                / 2,
+        ),
+        width: game_area_bounding_box_width,
+        height: game_area_bounding_box_height,
     };
+
+    let game_area = game_area_bounding_box.inner(Margin {
+        horizontal: 2, // Account for the scaled dimensions
+        vertical: 1,
+    });
+
     let scale_x = game_area.width as f32 / SERVER_GAME_BOARD_SIZE;
     let scale_y = game_area.height as f32 / SERVER_GAME_BOARD_SIZE;
-    (game_area, scale_x, scale_y)
+
+    (game_area_bounding_box, game_area, scale_x, scale_y)
 }
 
 /// Render all players
 pub fn render_players(
     players: &[&PlayerDto],
-    our_player: Uuid,
+    our_player_id: Uuid,
     frame: &mut Frame,
     game_area: &Rect,
     scale_x: f32,
@@ -136,7 +173,7 @@ pub fn render_players(
     for player in players {
         render_player(
             player,
-            player.id == our_player,
+            player.id == our_player_id,
             frame,
             game_area,
             scale_x,
@@ -154,70 +191,96 @@ pub fn render_player(
     scale_x: f32,
     scale_y: f32,
 ) {
-    // Calculate paddle dimensions and position
-    let paddle_length = (player.paddle_width * 2.0 * scale_x) as u16;
-    let paddle_thickness = 1; // Paddle depth is 1 character
-    let paddle_center = (player.paddle_position * scale_x) as u16;
+    const PLAYER_BODY: &str = "█";
 
     let player_style = if is_our_player {
-        Style::default().fg(Color::Green)
+        ratatui::style::Style::default().fg(ratatui::style::Color::Green)
     } else {
-        Style::default().fg(Color::White)
+        ratatui::style::Style::default().fg(ratatui::style::Color::White)
     };
 
-    // Determine paddle position based on player side
     match player.position {
-        Some(PlayerPosition::Top) => {
-            let paddle_x = game_area.x + paddle_center - paddle_length / 2;
-            let paddle_y = game_area.y;
-            frame.render_widget(
-                Paragraph::new("─".repeat(paddle_length as usize)).style(player_style),
-                Rect {
-                    x: paddle_x,
-                    y: paddle_y,
-                    width: paddle_length,
-                    height: paddle_thickness,
-                },
-            );
+        Some(PlayerPosition::Top) | Some(PlayerPosition::Bottom) => {
+            // Calculate horizontal paddle dimensions and position
+            let paddle_length = (player.paddle_width * scale_x) as u16;
+            let paddle_thickness = 1; // Paddle depth is 1 character
+
+            let paddle_center = (player.paddle_position * scale_x) as u16;
+            let paddle_x = game_area
+                .x
+                .saturating_add(paddle_center)
+                .saturating_sub(paddle_length / 2);
+            match player.position {
+                Some(PlayerPosition::Top) => {
+                    let paddle_y = game_area.y;
+                    frame.render_widget(
+                        Paragraph::new(PLAYER_BODY.repeat(paddle_length as usize))
+                            .style(player_style),
+                        Rect {
+                            x: paddle_x,
+                            y: paddle_y,
+                            width: paddle_length,
+                            height: paddle_thickness,
+                        },
+                    );
+                }
+                Some(PlayerPosition::Bottom) => {
+                    let paddle_y = game_area.y + game_area.height - paddle_thickness;
+                    frame.render_widget(
+                        Paragraph::new(PLAYER_BODY.repeat(paddle_length as usize))
+                            .style(player_style),
+                        Rect {
+                            x: paddle_x,
+                            y: paddle_y,
+                            width: paddle_length,
+                            height: paddle_thickness,
+                        },
+                    );
+                }
+                _ => {}
+            }
         }
-        Some(PlayerPosition::Bottom) => {
-            let paddle_x = game_area.x + paddle_center - paddle_length / 2;
-            let paddle_y = game_area.y + game_area.height - paddle_thickness;
-            frame.render_widget(
-                Paragraph::new("─".repeat(paddle_length as usize)).style(player_style),
-                Rect {
-                    x: paddle_x,
-                    y: paddle_y,
-                    width: paddle_length,
-                    height: paddle_thickness,
-                },
-            );
-        }
-        Some(PlayerPosition::Left) => {
-            let paddle_x = game_area.x;
-            let paddle_y = game_area.y + paddle_center - paddle_length / 2;
-            frame.render_widget(
-                Paragraph::new("│".repeat(paddle_length as usize)).style(player_style),
-                Rect {
-                    x: paddle_x,
-                    y: paddle_y,
-                    width: paddle_thickness,
-                    height: paddle_length,
-                },
-            );
-        }
-        Some(PlayerPosition::Right) => {
-            let paddle_x = game_area.x + game_area.width - paddle_thickness;
-            let paddle_y = game_area.y + paddle_center - paddle_length / 2;
-            frame.render_widget(
-                Paragraph::new("│".repeat(paddle_length as usize)).style(player_style),
-                Rect {
-                    x: paddle_x,
-                    y: paddle_y,
-                    width: paddle_thickness,
-                    height: paddle_length,
-                },
-            );
+        Some(PlayerPosition::Left) | Some(PlayerPosition::Right) => {
+            // Calculate vertical paddle dimensions and position
+            let paddle_length = (player.paddle_width * scale_y) as u16;
+            let paddle_thickness = 1; // Paddle depth is 1 character
+            let paddle_center = (player.paddle_position * scale_y) as u16;
+            let paddle_y = game_area
+                .y
+                .saturating_add(paddle_center)
+                .saturating_sub(paddle_length / 2);
+            match player.position {
+                Some(PlayerPosition::Left) => {
+                    let paddle_x = game_area.x;
+                    frame.render_widget(
+                        Paragraph::new(format!("{}\n", PLAYER_BODY).repeat(paddle_length as usize))
+                            .style(player_style),
+                        Rect {
+                            x: paddle_x,
+                            y: paddle_y,
+                            width: paddle_thickness,
+                            height: paddle_length,
+                        },
+                    );
+                }
+                Some(PlayerPosition::Right) => {
+                    let paddle_x = game_area
+                        .x
+                        .saturating_add(game_area.width)
+                        .saturating_sub(paddle_thickness);
+                    frame.render_widget(
+                        Paragraph::new(format!("{}\n", PLAYER_BODY).repeat(paddle_length as usize))
+                            .style(player_style),
+                        Rect {
+                            x: paddle_x,
+                            y: paddle_y,
+                            width: paddle_thickness,
+                            height: paddle_length,
+                        },
+                    );
+                }
+                _ => {}
+            }
         }
         None => {}
     }
@@ -232,12 +295,17 @@ pub fn render_ball(
     scale_y: f32,
 ) {
     // Calculate ball position in terminal coordinates
-    let ball_x = game_area.x + (ball.position.x * scale_x) as u16;
-    let ball_y = game_area.y + (ball.position.y * scale_y) as u16;
+    let ball_x = game_area
+        .x
+        .saturating_add((ball.position.x * scale_x) as u16);
+    let ball_y = game_area
+        .y
+        .saturating_add((ball.position.y * scale_y) as u16);
 
     // Render the ball as a single character
     frame.render_widget(
-        Paragraph::new("●").style(Style::default().fg(Color::White)),
+        Paragraph::new("●")
+            .style(ratatui::style::Style::default().fg(ratatui::style::Color::White)),
         Rect {
             x: ball_x,
             y: ball_y,

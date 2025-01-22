@@ -4,7 +4,6 @@ use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
-#[derive(Clone)]
 pub struct Quit {}
 
 impl Quit {

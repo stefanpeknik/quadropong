@@ -1,7 +1,10 @@
 use crate::client::net::udp::UdpClient;
-use crate::common::models::{ClientInput, ClientInputType, Direction, GameDto, PlayerDto};
+use crate::common::models::{
+    ClientInput, ClientInputType, Direction, GameDto, GameState, PlayerDto,
+};
+use crate::common::PlayerPosition;
 
-use super::menu::Menu;
+use super::game_end::GameEnd;
 use super::traits::{Render, State, Update};
 use super::utils::render::{calculate_game_area, render_ball, render_players};
 
@@ -13,15 +16,10 @@ use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 
-enum Options {
-    Active,
-    Paused,
-    Finished,
-}
-
 pub struct GameBoard {
     game: Arc<Mutex<GameDto>>,
     our_player_id: Uuid,
+    our_player_position: PlayerPosition,
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
     udp_client: Arc<UdpClient>,
@@ -29,6 +27,11 @@ pub struct GameBoard {
 
 impl GameBoard {
     pub fn new(game: GameDto, our_player_id: Uuid, udp_client: Arc<UdpClient>) -> Self {
+        let our_player_position = game
+            .players
+            .get(&our_player_id)
+            .map(|player| player.position.unwrap_or(PlayerPosition::Left)) // TODO: Handle this error better
+            .unwrap_or(PlayerPosition::Left); // TODO: Handle this error better
         let game = Arc::new(Mutex::new(game));
         let receive_updates = Arc::new(AtomicBool::new(true));
         let receive_updates_clone = Arc::clone(&receive_updates);
@@ -58,6 +61,7 @@ impl GameBoard {
         Self {
             game,
             our_player_id,
+            our_player_position,
             receive_update_handle,
             receive_updates,
             udp_client,
@@ -87,25 +91,51 @@ impl Update for GameBoard {
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+        match self.game.lock() {
+            Ok(game) => {
+                if game.state == GameState::Finished {
+                    return Ok(Some(Box::new(GameEnd::new(
+                        game.clone(),
+                        self.our_player_id,
+                    ))));
+                }
+            }
+            Err(_) => {}
+        }
         if let Some(key_code) = key_code {
             match key_code {
-                KeyCode::Up | KeyCode::Char('w') => {
-                    self.send_player_move(Direction::Positive).await?;
-                }
-                KeyCode::Down | KeyCode::Char('s') => {
-                    self.send_player_move(Direction::Negative).await?;
-                }
-                KeyCode::Left | KeyCode::Char('a') => {
-                    self.send_player_move(Direction::Negative).await?;
-                }
-                KeyCode::Right | KeyCode::Char('d') => {
-                    self.send_player_move(Direction::Positive).await?;
-                }
                 KeyCode::Esc => {
                     // TODO: just a placeholder for now
-                    return Ok(Some(Box::new(Menu::new(0))));
+                    match self.game.lock() {
+                        Ok(game) => {
+                            return Ok(Some(Box::new(GameEnd::new(
+                                game.clone(),
+                                self.our_player_id,
+                            ))));
+                        }
+                        Err(_) => {}
+                    }
                 }
-                _ => {}
+                _ => match self.our_player_position {
+                    PlayerPosition::Left | PlayerPosition::Right => match key_code {
+                        KeyCode::Up | KeyCode::Char('w') => {
+                            self.send_player_move(Direction::Negative).await?;
+                        }
+                        KeyCode::Down | KeyCode::Char('s') => {
+                            self.send_player_move(Direction::Positive).await?;
+                        }
+                        _ => {}
+                    },
+                    PlayerPosition::Top | PlayerPosition::Bottom => match key_code {
+                        KeyCode::Right | KeyCode::Char('d') => {
+                            self.send_player_move(Direction::Positive).await?;
+                        }
+                        KeyCode::Left | KeyCode::Char('a') => {
+                            self.send_player_move(Direction::Negative).await?;
+                        }
+                        _ => {}
+                    },
+                },
             };
         }
         Ok(None)
@@ -116,11 +146,13 @@ impl Render for GameBoard {
     fn render(&self, frame: &mut Frame) {
         if let Ok(game) = self.game.lock() {
             // Calculate the game area and scaling factors once
-            let (game_area, scale_x, scale_y) = calculate_game_area(frame);
+            let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(&frame);
 
-            let block = Block::bordered();
-
-            frame.render_widget(block, game_area);
+            // Render the game area border
+            frame.render_widget(
+                Block::bordered().title_bottom("press Enter to \"finish\" the game"), // TODO
+                game_area_bounding_box,
+            );
 
             // Render players
             let players: Vec<&PlayerDto> = game.players.values().collect();

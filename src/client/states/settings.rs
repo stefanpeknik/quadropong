@@ -7,7 +7,6 @@ use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
 use ratatui::Frame;
 
-#[derive(Clone)]
 pub enum Options {
     TODO,
 }
@@ -26,7 +25,6 @@ impl std::fmt::Display for Options {
     }
 }
 
-#[derive(Clone)]
 pub struct Settings {
     options: Vec<Options>,
     selected: usize,
