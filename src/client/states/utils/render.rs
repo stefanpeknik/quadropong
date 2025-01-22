@@ -191,7 +191,9 @@ pub fn render_player(
     scale_x: f32,
     scale_y: f32,
 ) {
-    const PLAYER_BODY: &str = "█";
+    const PLAYER_VERTICAL_BODY: &str = "█";
+    const PLAYER_UP_BODY: &str = "▄";
+    const PLAYER_BOTTOM_BODY: &str = "▀";
 
     let player_style = if is_our_player {
         ratatui::style::Style::default().fg(ratatui::style::Color::Green)
@@ -214,7 +216,7 @@ pub fn render_player(
                 Some(PlayerPosition::Top) => {
                     let paddle_y = game_area.y;
                     frame.render_widget(
-                        Paragraph::new(PLAYER_BODY.repeat(paddle_length as usize))
+                        Paragraph::new(PLAYER_UP_BODY.repeat(paddle_length as usize))
                             .style(player_style),
                         Rect {
                             x: paddle_x,
@@ -227,7 +229,7 @@ pub fn render_player(
                 Some(PlayerPosition::Bottom) => {
                     let paddle_y = game_area.y + game_area.height - paddle_thickness;
                     frame.render_widget(
-                        Paragraph::new(PLAYER_BODY.repeat(paddle_length as usize))
+                        Paragraph::new(PLAYER_BOTTOM_BODY.repeat(paddle_length as usize))
                             .style(player_style),
                         Rect {
                             x: paddle_x,
@@ -253,7 +255,7 @@ pub fn render_player(
                 Some(PlayerPosition::Left) => {
                     let paddle_x = game_area.x;
                     frame.render_widget(
-                        Paragraph::new(format!("{}\n", PLAYER_BODY).repeat(paddle_length as usize))
+                        Paragraph::new(format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize))
                             .style(player_style),
                         Rect {
                             x: paddle_x,
@@ -269,7 +271,7 @@ pub fn render_player(
                         .saturating_add(game_area.width)
                         .saturating_sub(paddle_thickness);
                     frame.render_widget(
-                        Paragraph::new(format!("{}\n", PLAYER_BODY).repeat(paddle_length as usize))
+                        Paragraph::new(format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize))
                             .style(player_style),
                         Rect {
                             x: paddle_x,
