@@ -80,16 +80,14 @@ impl App {
         let update_running = Arc::clone(&running);
         let update_handle: tokio::task::JoinHandle<Result<(), io::Error>> =
             task::spawn(async move {
-                let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(5));
                 let mut last_key_event_time = Instant::now();
                 let key_event_interval = Duration::from_millis(10);
                 let mut last_key_event: Option<KeyEvent> = None;
 
                 // Update loop
                 while update_running.load(std::sync::atomic::Ordering::Relaxed) {
-                    interval.tick().await;
                     // Poll for user input
-                    let input = if poll(Duration::ZERO)? {
+                    let input = if poll(Duration::from_millis(5))? {
                         let now = Instant::now();
                         if let Event::Key(key_event) = event::read()? {
                             // Reduction for continuous key events

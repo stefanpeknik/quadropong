@@ -7,7 +7,6 @@ use crate::common::Game;
 
 use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::game_board::GameBoard;
-use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
 use super::utils::render::{render_player_list, render_outer_rectangle};
 
@@ -63,12 +62,12 @@ impl Lobby {
             .expect("Failed to send introduction message"); // TODO: Handle this error
 
         let receive_updates = Arc::new(AtomicBool::new(true));
-        let game = Arc::new(Mutex::new(GameDto::from(game)));
+        let game_dto = Arc::new(Mutex::new(GameDto::from(game)));
 
         // Start a task to receive updates
         let udp_client_clone = Arc::clone(&udp_client);
         let receive_updates_clone = Arc::clone(&receive_updates);
-        let game_clone = Arc::clone(&game);
+        let game_clone = Arc::clone(&game_dto);
         let receive_update_handle = tokio::spawn(async move {
             while receive_updates_clone.load(Ordering::Relaxed) {
                 match udp_client_clone.recv_updated_game() {
@@ -92,7 +91,7 @@ impl Lobby {
         Self {
             options: Options::list(),
             selected: 0,
-            game,
+            game: game_dto,
             our_player_id,
             udp_client,
             receive_updates,
@@ -129,7 +128,8 @@ impl Update for Lobby {
                     // copy game id to clipboard
                     if let Ok(mut clipboard) = Clipboard::new() {
                         if let Ok(game) = self.game.lock() {
-                            if let Ok(_clipboard_content) = clipboard.set_text(game.id.to_string()) {
+                            if let Ok(_clipboard_content) = clipboard.set_text(game.id.to_string())
+                            {
                                 // TODO
                             }
                         }
@@ -166,7 +166,12 @@ impl Render for Lobby {
         let outer_rect = render_outer_rectangle(
             frame,
             " quadropong - Lobby ",
-            vec![" Leave Game ".into(), "<Esc> ".light_blue().bold(), "| Start Game ".into(), "<Space> ".light_blue().bold()],
+            vec![
+                " Leave Game ".into(),
+                "<Esc> ".light_blue().bold(),
+                "| Start Game ".into(),
+                "<Space> ".light_blue().bold(),
+            ],
         );
         let inner_rect = outer_rect.inner(Margin {
             horizontal: 2,

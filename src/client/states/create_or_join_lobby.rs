@@ -16,7 +16,7 @@ use ratatui::text::Line;
 use ratatui::widgets::{Block, Paragraph, Wrap};
 use ratatui::Frame;
 
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq)]
 pub enum Options {
     Create,
     Join,
@@ -132,23 +132,24 @@ impl Update for CreateOrJoinLobby {
                     }
                     KeyCode::Enter => {
                         match uuid::Uuid::parse_str(&self.join_lobby_input.input) {
-                            Ok(inputted_game_id) => match self
-                                .tcp_client
-                                .get_game(inputted_game_id)
-                                .await
-                            {
-                                Ok(game) => match self.tcp_client.join_game(game.id).await {
-                                    Ok(our_player) => {
-                                        return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
-                                    }
+                            Ok(inputted_game_id) => {
+                                match self.tcp_client.get_game(inputted_game_id).await {
+                                    Ok(game) => match self.tcp_client.join_game(game.id).await {
+                                        Ok(our_player) => {
+                                            return Ok(Some(Box::new(Lobby::new(
+                                                game,
+                                                our_player.id,
+                                            ))));
+                                        }
+                                        Err(e) => {
+                                            self.error_message = Some(e.to_string());
+                                        }
+                                    },
                                     Err(e) => {
                                         self.error_message = Some(e.to_string());
                                     }
-                                },
-                                Err(e) => {
-                                    self.error_message = Some(e.to_string());
                                 }
-                            },
+                            }
                             Err(e) => {
                                 self.error_message = Some(format!("Invalid UUID: {}", e));
                             }

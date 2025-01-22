@@ -10,7 +10,6 @@ use crossterm::event::KeyCode;
 use ratatui::style::Stylize;
 use ratatui::Frame;
 
-#[derive(Clone)]
 pub enum Options {
     Online,
     Training,
@@ -33,7 +32,6 @@ impl std::fmt::Display for Options {
     }
 }
 
-#[derive(Clone)]
 pub struct Menu {
     options: Vec<Options>,
     selected: usize,
