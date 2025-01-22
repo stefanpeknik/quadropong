@@ -9,7 +9,7 @@ use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::game_board::GameBoard;
 use super::menu::Menu;
 use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_list, render_outer_rectangle};
+use super::utils::render::{render_player_list, render_outer_rectangle};
 
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
@@ -178,14 +178,20 @@ impl Render for Lobby {
 
         if let Ok(game) = self.game.lock() {
             let mut list = vec![];
-            let mut players: Vec<_> = game
+            let mut players_info: Vec<_> = game
                 .players
                 .iter()
-                .map(|(p_id, p)| format!("{}: {}", p_id, p.name))
+                .map(|(p_id, p)|
+                    if *p_id == self.our_player_id {
+                        (format!("You ({}): {}", p.name, p_id), p.joined_at)
+                    } else {
+                        (format!("{}: {}", p.name, p_id), p.joined_at)
+                    })
                 .collect();
-            players.sort();
+            // TODO add joined_at to playerDto and sort by it
+            players_info.sort_by(|(_, p1_joined_at), (_, p2_joined_at)| p1_joined_at.cmp(p2_joined_at) );
+            let players: Vec<_> = players_info.into_iter().map(|(players, _)| players).collect();
             list.extend(players);
-            list.push(format!("You: {}", self.our_player_id));
 
             // render lobby ID
             let lobby_id_block = Block::bordered().title_bottom(
@@ -196,7 +202,7 @@ impl Render for Lobby {
             frame.render_widget(lobby_id_paragraph, inner_lobby_id_area);
             frame.render_widget(lobby_id_block, lobby_id_area);
 
-            render_list(
+            render_player_list(
                 frame,
                 &list,
                 self.selected,

@@ -80,6 +80,21 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
     }
 }
 
+/// Renders a list of players
+pub fn render_player_list(frame: &mut Frame, items: &[String], _selected_index: usize, rect: Rect) {
+    let vertical_text_spaces = evenly_distanced_rects(rect, 4);
+
+    for (i, (text, area)) in items
+        .iter()
+        .zip(vertical_text_spaces.iter()) // skip the first area as that only creates space from the top
+        .enumerate()
+    {
+        let text = Line::from(text.as_str());
+
+        render_text_in_center_of_rect(frame, Paragraph::new(text), *area);
+    }
+}
+
 pub fn render_text_in_center_of_rect(frame: &mut Frame, text: Paragraph, rect: Rect) {
     frame.render_widget(text.centered(), evenly_distanced_rects(rect, 2)[1]);
 }
