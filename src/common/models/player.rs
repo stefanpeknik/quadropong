@@ -15,6 +15,7 @@ pub enum PlayerPosition {
 pub struct Player {
     pub id: Uuid,
     pub name: String,
+    pub joined_at: chrono::DateTime<chrono::Utc>,
     pub score: u32,
     pub addr: Option<SocketAddr>,
     pub position: Option<PlayerPosition>,
@@ -27,7 +28,8 @@ impl Player {
     pub fn new(name: String) -> Self {
         Self {
             id: Uuid::new_v4(),
-            name: name,
+            name,
+            joined_at: chrono::Utc::now(),
             score: 0,
             addr: None,
             position: None,

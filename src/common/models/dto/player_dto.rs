@@ -7,6 +7,7 @@ use crate::common::{models::player::PlayerPosition, Player};
 pub struct PlayerDto {
     pub id: Uuid,
     pub name: String,
+    pub joined_at: chrono::DateTime<chrono::Utc>,
     pub score: u32,
     pub position: Option<PlayerPosition>,
     pub paddle_position: f32,
@@ -19,6 +20,7 @@ impl From<Player> for PlayerDto {
         PlayerDto {
             id: player.id,
             name: player.name,
+            joined_at: player.joined_at,
             score: player.score,
             position: player.position,
             paddle_position: player.paddle_position,
