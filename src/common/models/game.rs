@@ -136,6 +136,9 @@ impl Game {
     }
 
     pub fn update_ball_position(&mut self) {
+        if self.state != GameState::Active {
+            return;
+        }
         if let Some(ball) = &mut self.ball {
             ball.position.x += ball.velocity.x;
             ball.position.y += ball.velocity.y;

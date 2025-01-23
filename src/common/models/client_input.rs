@@ -10,6 +10,7 @@ pub enum ClientInputType {
     ResumeGame,
     StartGame,
     MovePaddle(Direction),
+    Disconnect,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
