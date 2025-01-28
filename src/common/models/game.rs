@@ -135,6 +135,32 @@ impl Game {
         Ok(())
     }
 
+    pub fn get_player_by_side(&self, side: PlayerPosition) -> Option<&Player> {
+        self.players
+            .values()
+            .find(|player| player.position == Some(side))
+    }
+
+    pub fn goal_action(&mut self) {
+        if self.state != GameState::Active {
+            return;
+        }
+
+        let mut last_touched: Option<Uuid> = None;
+
+        if let Some(ref mut ball) = self.ball {
+            last_touched = ball.last_touched_by;
+            ball.reset();
+        }
+
+        if let Some(id) = last_touched {
+            let player = self.get_player_mut(&id);
+            if let Some(player) = player {
+                player.increment_score();
+            }
+        }
+    }
+
     pub fn update_ball_position(&mut self) {
         if self.state != GameState::Active {
             return;
