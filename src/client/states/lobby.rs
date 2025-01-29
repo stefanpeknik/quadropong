@@ -2,13 +2,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::net::udp::UdpClient;
+use crate::client::settings;
 use crate::common::models::{ClientInput, ClientInputType, GameDto};
 use crate::common::Game;
 
 use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::game_board::GameBoard;
-use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_player_list, render_outer_rectangle};
+use super::traits::{HasSettings, Render, State, Update};
+use super::utils::render::{render_outer_rectangle, render_player_list};
 
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
@@ -21,12 +22,6 @@ use uuid::Uuid;
 
 pub enum Options {
     TODO,
-}
-
-impl ListEnum for Options {
-    fn list() -> Vec<Self> {
-        vec![Options::TODO]
-    }
 }
 
 impl std::fmt::Display for Options {
@@ -45,11 +40,13 @@ pub struct Lobby {
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
     udp_client: Arc<UdpClient>,
+    settings: settings::Settings,
 }
 
 impl Lobby {
-    pub fn new(game: Game, our_player_id: Uuid) -> Self {
-        let udp_client = Arc::new(UdpClient::new().expect("Failed to create UDP client")); // TODO: Handle this error
+    pub fn new(game: Game, our_player_id: Uuid, settings: settings::Settings) -> Self {
+        let udp_client =
+            Arc::new(UdpClient::new(&settings.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
 
         // send introduction message
         let client_input = ClientInput::new(
@@ -89,18 +86,17 @@ impl Lobby {
         });
 
         Self {
-            options: Options::list(),
+            options: vec![Options::TODO],
             selected: 0,
             game: game_dto,
             our_player_id,
             udp_client,
             receive_updates,
             receive_update_handle,
+            settings,
         }
     }
-}
 
-impl HasOptions for Lobby {
     fn next(&mut self) {
         self.selected = (self.selected + 1) % self.options.len();
     }
@@ -115,6 +111,12 @@ impl HasOptions for Lobby {
 }
 
 impl State for Lobby {}
+
+impl HasSettings for Lobby {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
 
 #[async_trait::async_trait]
 impl Update for Lobby {
@@ -148,11 +150,14 @@ impl Update for Lobby {
                                 .to_owned(),
                             self.our_player_id,
                             Arc::clone(&self.udp_client),
+                            self.settings.clone(),
                         ))));
                     }
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(CreateOrJoinLobby::new())));
+                    return Ok(Some(Box::new(CreateOrJoinLobby::new(
+                        self.settings.clone(),
+                    ))));
                 }
                 _ => {}
             };
@@ -186,16 +191,21 @@ impl Render for Lobby {
             let mut players_info: Vec<_> = game
                 .players
                 .iter()
-                .map(|(p_id, p)|
+                .map(|(p_id, p)| {
                     if *p_id == self.our_player_id {
                         (format!("You ({}): {}", p.name, p_id), p.joined_at)
                     } else {
                         (format!("{}: {}", p.name, p_id), p.joined_at)
-                    })
+                    }
+                })
                 .collect();
             // TODO add joined_at to playerDto and sort by it
-            players_info.sort_by(|(_, p1_joined_at), (_, p2_joined_at)| p1_joined_at.cmp(p2_joined_at) );
-            let players: Vec<_> = players_info.into_iter().map(|(players, _)| players).collect();
+            players_info
+                .sort_by(|(_, p1_joined_at), (_, p2_joined_at)| p1_joined_at.cmp(p2_joined_at));
+            let players: Vec<_> = players_info
+                .into_iter()
+                .map(|(players, _)| players)
+                .collect();
             list.extend(players);
 
             // render lobby ID

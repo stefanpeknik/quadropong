@@ -3,17 +3,11 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::common::{Game, GameRooms, Player};
-
-#[derive(Deserialize)]
-pub struct JoinGameRequest {
-    username: Option<String>,
-}
+use crate::common::{Game, GameRooms, JoinGameRequest, Player};
 
 pub async fn join_game(
     State(app_state): State<Arc<Mutex<GameRooms>>>,

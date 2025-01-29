@@ -1,5 +1,7 @@
+use crate::client::settings;
+
 use super::menu::Menu;
-use super::traits::{HasOptions, ListEnum, Render, State, Update};
+use super::traits::{HasSettings, Render, State, Update};
 use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
 use axum::async_trait;
@@ -9,12 +11,6 @@ use ratatui::Frame;
 
 pub enum Options {
     TODO,
-}
-
-impl ListEnum for Options {
-    fn list() -> Vec<Self> {
-        vec![Options::TODO]
-    }
 }
 
 impl std::fmt::Display for Options {
@@ -28,18 +24,17 @@ impl std::fmt::Display for Options {
 pub struct Training {
     options: Vec<Options>,
     selected: usize,
+    settings: settings::Settings,
 }
 
 impl Training {
-    pub fn new() -> Self {
+    pub fn new(settings: settings::Settings) -> Self {
         Self {
-            options: Options::list(),
+            options: vec![Options::TODO],
             selected: 0,
+            settings,
         }
     }
-}
-
-impl HasOptions for Training {
     fn next(&mut self) {
         self.selected = (self.selected + 1) % self.options.len();
     }
@@ -54,6 +49,12 @@ impl HasOptions for Training {
 }
 
 impl State for Training {}
+
+impl HasSettings for Training {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
 
 #[async_trait]
 impl Update for Training {
@@ -70,7 +71,7 @@ impl Update for Training {
                     _ => {}
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(1))));
+                    return Ok(Some(Box::new(Menu::new(1, self.settings.clone()))));
                 }
                 _ => {}
             };

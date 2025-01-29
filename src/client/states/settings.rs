@@ -1,26 +1,34 @@
+use std::sync::Mutex;
+
+use crate::client::settings;
+
 use super::menu::Menu;
-use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
+use super::traits::{HasSettings, Render, State, Update};
+use super::utils::input::Input;
+use super::utils::render::{into_title, render_outer_rectangle, render_settings};
+use super::utils::slider::Slider;
+use super::utils::widget::{Widget, WidgetTrait};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
+use ratatui::layout::Margin;
 use ratatui::style::Stylize;
 use ratatui::Frame;
 
 pub enum Options {
-    TODO,
-}
-
-impl ListEnum for Options {
-    fn list() -> Vec<Self> {
-        vec![Options::TODO]
-    }
+    PlayerName(Widget),
+    PlayerColor(Widget),
+    OtherPlayersColor(Widget),
+    FPS(Widget),
 }
 
 impl std::fmt::Display for Options {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Options::TODO => write!(f, "TODO"),
+            Options::PlayerName(_) => write!(f, " {} ", into_title("player name")),
+            Options::PlayerColor(_) => write!(f, " {} ", into_title("plyer color")),
+            Options::OtherPlayersColor(_) => write!(f, " {} ", into_title("other player color")),
+            Options::FPS(_) => write!(f, " {} ", into_title("fps")),
         }
     }
 }
@@ -28,18 +36,62 @@ impl std::fmt::Display for Options {
 pub struct Settings {
     options: Vec<Options>,
     selected: usize,
+    settings: Mutex<settings::Settings>,
 }
 
 impl Settings {
-    pub fn new() -> Self {
+    pub fn new(settings: settings::Settings) -> Self {
+        let options = Self::fill_settings(settings.clone());
         Self {
-            options: Options::list(),
+            options,
             selected: 0,
+            settings: Mutex::new(settings),
         }
     }
-}
 
-impl HasOptions for Settings {
+    fn fill_settings(settings: settings::Settings) -> Vec<Options> {
+        vec![
+            Options::PlayerName(Widget::Input(Input::from(settings.player_name.to_string()))),
+            Options::PlayerColor(Widget::Slider(Slider::from(
+                settings.player_color.to_string(),
+            ))),
+            Options::OtherPlayersColor(Widget::Slider(Slider::from(
+                settings.other_players_color.to_string(),
+            ))),
+            Options::FPS(Widget::Input(Input::from(settings.fps.to_string()))),
+        ]
+    }
+
+    pub fn get_widget_active(&self) -> &Widget {
+        match &self.options[self.selected] {
+            Options::PlayerName(widget) => widget,
+            Options::PlayerColor(widget) => widget,
+            Options::OtherPlayersColor(widget) => widget,
+            Options::FPS(widget) => widget,
+        }
+    }
+
+    pub fn get_widget_all(&self) -> Vec<&Widget> {
+        self.options
+            .iter()
+            .map(|option| match option {
+                Options::PlayerName(widget) => widget,
+                Options::PlayerColor(widget) => widget,
+                Options::OtherPlayersColor(widget) => widget,
+                Options::FPS(widget) => widget,
+            })
+            .collect()
+    }
+
+    pub fn get_widget_active_as_mut(&mut self) -> &mut Widget {
+        match &mut self.options[self.selected] {
+            Options::PlayerName(widget) => widget,
+            Options::PlayerColor(widget) => widget,
+            Options::OtherPlayersColor(widget) => widget,
+            Options::FPS(widget) => widget,
+        }
+    }
+
     fn next(&mut self) {
         self.selected = (self.selected + 1) % self.options.len();
     }
@@ -55,22 +107,55 @@ impl HasOptions for Settings {
 
 impl State for Settings {}
 
+impl HasSettings for Settings {
+    fn settings(&self) -> settings::Settings {
+        self.settings.lock().unwrap().clone() // TODO: Check if this is correct
+    }
+}
+
 #[async_trait]
 impl Update for Settings {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+        let active_widget = self.get_widget_active_as_mut();
+
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
-                KeyCode::Enter => match self.options[self.selected] {
-                    // TODO: Implement this
-                    _ => {}
-                },
+                KeyCode::Left
+                | KeyCode::Right
+                | KeyCode::Char(_)
+                | KeyCode::Backspace
+                | KeyCode::Tab => {
+                    match active_widget {
+                        Widget::Slider(ref mut slider) => {
+                            slider.handle_key_event(key_code);
+                        }
+                        Widget::Input(ref mut input) => {
+                            input.handle_key_event(key_code);
+                        }
+                    }
+                    if let Ok(mut settings) = self.settings.lock() {
+                        // save selected option to settings
+                        settings.save_option(&self.options[self.selected]);
+                    }
+                }
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(2))));
+                    if let Ok(mut settings) = self.settings.lock() {
+                        // save to config file before exiting screen
+                        let _ = settings.save_config();
+                        return Ok(Some(Box::new(Menu::new(2, settings.clone()))));
+                    }
+                }
+                KeyCode::End => {
+                    if let Ok(mut settings) = self.settings.lock() {
+                        // load default settings
+                        *settings = settings::Settings::default();
+                        self.options = Self::fill_settings(settings::Settings::default());
+                    }
                 }
                 _ => {}
             };
@@ -88,23 +173,33 @@ impl Render for Settings {
                 " Back".into(),
                 " <Esc> ".light_blue().bold(),
                 "| Up".into(),
-                " <\u{2191}> ".light_blue().into(),
+                " <\u{2191}> ".light_blue().bold(),
                 "| Down".into(),
-                " <\u{2193}> ".light_blue().into(),
+                " <\u{2193}> ".light_blue().bold(),
+                "| Reset default".into(),
+                " <End> ".light_blue().bold(),
             ],
         );
 
-        let inner_rect = render_inner_rectangle(frame, outer_rect);
+        let inner_rect = outer_rect.inner(Margin {
+            horizontal: 5,
+            vertical: 5,
+        });
 
-        render_list(
-            frame,
-            &self
-                .options
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>(),
-            self.selected,
-            inner_rect,
-        );
+        if let Ok(_settings) = self.settings.lock() {
+            let selected_index = self.selected;
+            render_settings(
+                frame,
+                &self
+                    .options
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+                &self.get_widget_all(),
+                &self.get_widget_active(),
+                selected_index,
+                inner_rect,
+            );
+        }
     }
 }

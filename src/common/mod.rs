@@ -3,4 +3,4 @@ pub mod game_loop;
 pub mod models;
 
 pub use game_error::GameError;
-pub use models::{Game, GameRooms, Player, PlayerPosition};
+pub use models::{Game, GameRooms, JoinGameRequest, Player, PlayerPosition};

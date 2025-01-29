@@ -1,25 +1,26 @@
 use reqwest::Client;
+use serde_json;
 use uuid::Uuid;
 
-use crate::common::{Game, Player};
+use crate::common::{Game, JoinGameRequest, Player};
 
 use super::error::TcpError;
 
-const SERVER_ADDR: &str = "http://127.0.0.1:3000";
-
 pub struct TcpClient {
+    server_addr: String,
     client: Client,
 }
 
 impl TcpClient {
-    pub fn new() -> Self {
+    pub fn new(server_addr: &str) -> Self {
         TcpClient {
+            server_addr: server_addr.to_string(),
             client: Client::new(),
         }
     }
 
     pub async fn create_game(&self) -> Result<Game, TcpError> {
-        let url = format!("{}/game", SERVER_ADDR);
+        let url = format!("{}/game", self.server_addr);
 
         // Send the request and handle potential errors
         let response = self
@@ -50,7 +51,7 @@ impl TcpClient {
     }
 
     pub async fn get_game(&self, game_id: Uuid) -> Result<Game, TcpError> {
-        let url = format!("{}/game/{}", SERVER_ADDR, game_id);
+        let url = format!("{}/game/{}", self.server_addr, game_id);
 
         // Send the request and handle potential errors
         let response = self
@@ -80,15 +81,20 @@ impl TcpClient {
         Ok(game)
     }
 
-    pub async fn join_game(&self, game_id: Uuid) -> Result<Player, TcpError> {
-        let url = format!("{}/game/{}/join", SERVER_ADDR, game_id);
+    pub async fn join_game(
+        &self,
+        game_id: Uuid,
+        username: Option<String>,
+    ) -> Result<Player, TcpError> {
+        let url = format!("{}/game/{}/join", self.server_addr, game_id);
+        let payload_json = serde_json::to_string(&JoinGameRequest { username })?;
 
         // Send the request and handle potential errors
         let response = self
             .client
             .post(&url)
             .header("Content-Type", "application/json")
-            .body("{}")
+            .body(payload_json)
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;
