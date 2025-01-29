@@ -2,8 +2,11 @@ use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::quit::Quit;
 use super::settings::Settings;
 use super::training::Training;
-use super::traits::{HasOptions, ListEnum, Render, State, Update};
-use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
+use super::traits::{HasSettings, Render, State, Update};
+use super::utils::render::{
+    into_title, render_inner_rectangle, render_list, render_outer_rectangle,
+};
+use crate::client::settings;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
@@ -16,18 +19,12 @@ pub enum Options {
     Settings,
 }
 
-impl ListEnum for Options {
-    fn list() -> Vec<Self> {
-        vec![Options::Online, Options::Training, Options::Settings]
-    }
-}
-
 impl std::fmt::Display for Options {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Options::Online => write!(f, "P L A Y  W I T H  F R I E N D S"),
-            Options::Training => write!(f, "T R A I N I N G"),
-            Options::Settings => write!(f, "S E T T I N G S"),
+            Options::Online => write!(f, " {} ", into_title("play with friends")),
+            Options::Training => write!(f, " {} ", into_title("training")),
+            Options::Settings => write!(f, " {} ", into_title("settings")),
         }
     }
 }
@@ -35,18 +32,18 @@ impl std::fmt::Display for Options {
 pub struct Menu {
     options: Vec<Options>,
     selected: usize,
+    settings: settings::Settings,
 }
 
 impl Menu {
-    pub fn new(selected: usize) -> Self {
+    pub fn new(selected: usize, settings: settings::Settings) -> Self {
         Self {
-            options: Options::list(),
+            options: vec![Options::Online, Options::Training, Options::Settings],
             selected,
+            settings,
         }
     }
-}
 
-impl HasOptions for Menu {
     fn next(&mut self) {
         self.selected = (self.selected + 1) % self.options.len();
     }
@@ -62,6 +59,12 @@ impl HasOptions for Menu {
 
 impl State for Menu {}
 
+impl HasSettings for Menu {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
+
 #[async_trait]
 impl Update for Menu {
     async fn update(
@@ -74,15 +77,19 @@ impl Update for Menu {
                 KeyCode::Down => self.next(),
                 KeyCode::Enter => match self.options[self.selected] {
                     Options::Online => {
-                        return Ok(Some(Box::new(CreateOrJoinLobby::new())));
+                        return Ok(Some(Box::new(CreateOrJoinLobby::new(
+                            self.settings.clone(),
+                        ))));
                     }
-                    Options::Training => return Ok(Some(Box::new(Training::new()))),
+                    Options::Training => {
+                        return Ok(Some(Box::new(Training::new(self.settings.clone()))))
+                    }
                     Options::Settings => {
-                        return Ok(Some(Box::new(Settings::new())));
+                        return Ok(Some(Box::new(Settings::new(self.settings.clone()))));
                     }
                 },
                 KeyCode::Char('q') => {
-                    return Ok(Some(Box::new(Quit::new())));
+                    return Ok(Some(Box::new(Quit::new(self.settings.clone()))));
                 }
                 _ => {}
             };

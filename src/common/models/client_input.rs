@@ -40,3 +40,8 @@ pub struct ClientInputWithAddr {
     pub addr: SocketAddr,
     pub input: ClientInput,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct JoinGameRequest {
+    pub username: Option<String>,
+}

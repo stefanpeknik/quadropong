@@ -1,4 +1,3 @@
-/// Captures the user typing input and the cursor position in the input
 #[derive(Clone)]
 pub struct Input {
     pub input: String,
@@ -11,6 +10,17 @@ impl Input {
             input: String::new(),
             char_index: 0,
         }
+    }
+
+    pub fn from(string: String) -> Self {
+        Self {
+            input: string.clone(),
+            char_index: string.len(),
+        }
+    }
+
+    pub fn get_text(self) -> String {
+        self.input
     }
 
     fn remove_whitespace(s: &mut String) {

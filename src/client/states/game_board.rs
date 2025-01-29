@@ -1,12 +1,13 @@
 use crate::client::net::udp::UdpClient;
+use crate::client::settings;
 use crate::common::models::{
     ClientInput, ClientInputType, Direction, GameDto, GameState, PlayerDto,
 };
 use crate::common::PlayerPosition;
 
 use super::game_end::GameEnd;
-use super::traits::{Render, State, Update};
-use super::utils::render::{calculate_game_area, render_ball, render_players};
+use super::traits::{HasSettings, Render, State, Update};
+use super::utils::render::{calculate_game_area, render_ball, render_player};
 
 use crossterm::event::KeyCode;
 use ratatui::widgets::Block;
@@ -23,10 +24,16 @@ pub struct GameBoard {
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
     udp_client: Arc<UdpClient>,
+    settings: settings::Settings,
 }
 
 impl GameBoard {
-    pub fn new(game: GameDto, our_player_id: Uuid, udp_client: Arc<UdpClient>) -> Self {
+    pub fn new(
+        game: GameDto,
+        our_player_id: Uuid,
+        udp_client: Arc<UdpClient>,
+        settings: settings::Settings,
+    ) -> Self {
         let our_player_position = game
             .players
             .get(&our_player_id)
@@ -65,6 +72,7 @@ impl GameBoard {
             receive_update_handle,
             receive_updates,
             udp_client,
+            settings,
         }
     }
 
@@ -85,6 +93,12 @@ impl GameBoard {
 
 impl State for GameBoard {}
 
+impl HasSettings for GameBoard {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
+
 #[async_trait::async_trait]
 impl Update for GameBoard {
     async fn update(
@@ -97,6 +111,7 @@ impl Update for GameBoard {
                     return Ok(Some(Box::new(GameEnd::new(
                         game.clone(),
                         self.our_player_id,
+                        self.settings.clone(),
                     ))));
                 }
             }
@@ -111,6 +126,7 @@ impl Update for GameBoard {
                             return Ok(Some(Box::new(GameEnd::new(
                                 game.clone(),
                                 self.our_player_id,
+                                self.settings.clone(),
                             ))));
                         }
                         Err(_) => {}
@@ -155,15 +171,14 @@ impl Render for GameBoard {
             );
 
             // Render players
-            let players: Vec<&PlayerDto> = game.players.values().collect();
-            render_players(
-                &players,
-                self.our_player_id,
-                frame,
-                &game_area,
-                scale_x,
-                scale_y,
-            );
+            for player in game.players.values() {
+                let player_color = if player.id == self.our_player_id {
+                    self.settings.player_color
+                } else {
+                    self.settings.other_players_color
+                };
+                render_player(player, player_color, frame, &game_area, scale_x, scale_y);
+            }
 
             // Render the ball
             if let Some(ball) = &game.ball {

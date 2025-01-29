@@ -1,14 +1,15 @@
 use crate::client::net::tcp::TcpClient;
+use crate::client::settings;
 
 use super::lobby::Lobby;
 use super::menu::Menu;
-use super::traits::{HasOptions, ListEnum, Render, State, Update};
+use super::traits::{HasSettings, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{
-    evenly_distanced_rects, render_inner_rectangle, render_outer_rectangle,
+    evenly_distanced_rects, into_title, render_inner_rectangle, render_outer_rectangle,
 };
+use super::utils::widget::WidgetTrait;
 
-use arboard::Clipboard;
 use crossterm::event::KeyCode;
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
@@ -22,17 +23,11 @@ pub enum Options {
     Join,
 }
 
-impl ListEnum for Options {
-    fn list() -> Vec<Self> {
-        vec![Options::Create, Options::Join]
-    }
-}
-
 impl std::fmt::Display for Options {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Options::Create => write!(f, "C R E A T E  L O B B Y"),
-            Options::Join => write!(f, " J O I N  L O B B Y "),
+            Options::Create => write!(f, " {} ", into_title("create lobby")),
+            Options::Join => write!(f, " {} ", into_title("join lobby")),
         }
     }
 }
@@ -43,21 +38,21 @@ pub struct CreateOrJoinLobby {
     join_lobby_input: Input,
     error_message: Option<String>,
     tcp_client: TcpClient,
+    settings: settings::Settings,
 }
 
 impl CreateOrJoinLobby {
-    pub fn new() -> Self {
+    pub fn new(settings: settings::Settings) -> Self {
         Self {
-            options: Options::list(),
+            options: vec![Options::Create, Options::Join],
             selected: 0,
             join_lobby_input: Input::new(),
             error_message: None,
-            tcp_client: TcpClient::new(),
+            tcp_client: TcpClient::new(&settings.api_url),
+            settings,
         }
     }
-}
 
-impl HasOptions for CreateOrJoinLobby {
     fn next(&mut self) {
         self.selected = (self.selected + 1) % self.options.len();
     }
@@ -73,6 +68,12 @@ impl HasOptions for CreateOrJoinLobby {
 
 impl State for CreateOrJoinLobby {}
 
+impl HasSettings for CreateOrJoinLobby {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
+
 #[async_trait::async_trait]
 impl Update for CreateOrJoinLobby {
     async fn update(
@@ -85,7 +86,7 @@ impl Update for CreateOrJoinLobby {
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(0))));
+                    return Ok(Some(Box::new(Menu::new(0, self.settings.clone()))));
                 }
 
                 _ => {}
@@ -95,10 +96,18 @@ impl Update for CreateOrJoinLobby {
                 Options::Create => match key_code {
                     KeyCode::Enter => match self.tcp_client.create_game().await {
                         // Game is created, but we need to join it to get our player id
-                        Ok(game) => match self.tcp_client.join_game(game.id).await {
+                        Ok(game) => match self
+                            .tcp_client
+                            .join_game(game.id, Some(self.settings.player_name.clone()))
+                            .await
+                        {
                             // We successfully joined the game
                             Ok(our_player) => {
-                                return Ok(Some(Box::new(Lobby::new(game, our_player.id))));
+                                return Ok(Some(Box::new(Lobby::new(
+                                    game,
+                                    our_player.id,
+                                    self.settings.clone(),
+                                ))));
                             }
                             Err(e) => {
                                 self.error_message = Some(e.to_string());
@@ -111,34 +120,25 @@ impl Update for CreateOrJoinLobby {
                     _ => {}
                 },
                 Options::Join => match key_code {
-                    KeyCode::Left => {
-                        self.join_lobby_input.move_left();
-                    }
-                    KeyCode::Right => {
-                        self.join_lobby_input.move_right();
-                    }
-                    KeyCode::Char(c) => {
-                        self.join_lobby_input.insert_char(c);
-                    }
-                    KeyCode::Backspace => {
-                        self.join_lobby_input.delete_char();
-                    }
-                    KeyCode::Tab => {
-                        if let Ok(mut clipboard) = Clipboard::new() {
-                            if let Ok(clipboard_content) = clipboard.get_text() {
-                                self.join_lobby_input.insert_clipboard(clipboard_content);
-                            }
-                        }
-                    }
+                    KeyCode::Left
+                    | KeyCode::Right
+                    | KeyCode::Char(_)
+                    | KeyCode::Backspace
+                    | KeyCode::Tab => self.join_lobby_input.handle_key_event(key_code),
                     KeyCode::Enter => {
                         match uuid::Uuid::parse_str(&self.join_lobby_input.input) {
                             Ok(inputted_game_id) => {
                                 match self.tcp_client.get_game(inputted_game_id).await {
-                                    Ok(game) => match self.tcp_client.join_game(game.id).await {
+                                    Ok(game) => match self
+                                        .tcp_client
+                                        .join_game(game.id, Some(self.settings.player_name.clone()))
+                                        .await
+                                    {
                                         Ok(our_player) => {
                                             return Ok(Some(Box::new(Lobby::new(
                                                 game,
                                                 our_player.id,
+                                                self.settings.clone(),
                                             ))));
                                         }
                                         Err(e) => {
@@ -193,7 +193,7 @@ impl Render for CreateOrJoinLobby {
 
         // render create lobby area
         let create_area_text = if self.options[self.selected] == Options::Create {
-            Line::from(format!("> {} <", Options::Create)).bold()
+            Line::from(format!(">{}<", Options::Create)).bold()
         } else {
             Line::from(Options::Create.to_string())
         };

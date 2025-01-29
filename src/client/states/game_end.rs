@@ -3,29 +3,37 @@ use crossterm::event::KeyCode;
 use ratatui::Frame;
 use uuid::Uuid;
 
-use crate::common::models::GameDto;
+use crate::{client::settings, common::models::GameDto};
 
 use super::{
     menu::Menu,
-    traits::{Render, State, Update},
+    traits::{HasSettings, Render, State, Update},
     utils::render::{render_inner_rectangle, render_list, render_outer_rectangle},
 };
 
 pub struct GameEnd {
     game: GameDto,
     our_player_id: Uuid,
+    settings: settings::Settings,
 }
 
 impl GameEnd {
-    pub fn new(game: GameDto, our_player_id: Uuid) -> Self {
+    pub fn new(game: GameDto, our_player_id: Uuid, settings: settings::Settings) -> Self {
         Self {
             game,
             our_player_id,
+            settings,
         }
     }
 }
 
 impl State for GameEnd {}
+
+impl HasSettings for GameEnd {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
 
 #[async_trait]
 impl Update for GameEnd {
@@ -36,7 +44,7 @@ impl Update for GameEnd {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Enter => {
-                    return Ok(Some(Box::new(Menu::new(0))));
+                    return Ok(Some(Box::new(Menu::new(0, self.settings.clone()))));
                 }
                 _ => {}
             };

@@ -1,24 +1,34 @@
-use super::traits::{Render, State, Update};
+use crate::client::settings;
+
+use super::traits::{HasSettings, Render, State, Update};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
-pub struct Quit {}
+pub struct Quit {
+    settings: settings::Settings,
+}
 
 impl Quit {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(settings: settings::Settings) -> Self {
+        Self { settings }
     }
 }
 
 impl State for Quit {}
 
+impl HasSettings for Quit {
+    fn settings(&self) -> settings::Settings {
+        self.settings.clone()
+    }
+}
+
 #[async_trait]
 impl Update for Quit {
     async fn update(
         &mut self,
-        _: Option<KeyCode>,
+        _key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
         Ok(None)
     }

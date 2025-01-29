@@ -1,18 +1,27 @@
 use std::rc::Rc;
 
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Margin, Rect},
-    style::Stylize,
-    text::{Line, Span},
+    layout::{Constraint, Flex, Layout, Margin, Position, Rect},
+    style::{Color, Style, Styled, Stylize},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
 
-use uuid::Uuid;
-
 use crate::common::models::{BallDto, PlayerDto, PlayerPosition};
 
+use super::widget::{get_widget_text, Widget};
+
 const SERVER_GAME_BOARD_SIZE: f32 = 10.0;
+
+pub fn into_title(input: &str) -> String {
+    input
+        .to_uppercase()
+        .chars()
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 
 /// Draws the outer rectangle, renders it, and returns its Rect
 pub fn render_outer_rectangle(
@@ -70,7 +79,7 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
         .enumerate()
     {
         let text = if i == selected_index {
-            Line::from(format!("> {} <", text)).bold()
+            Line::from(format!(">{}<", text)).bold()
         } else {
             Line::from(text.as_str())
         };
@@ -83,14 +92,92 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
 pub fn render_player_list(frame: &mut Frame, items: &[String], _selected_index: usize, rect: Rect) {
     let vertical_text_spaces = evenly_distanced_rects(rect, 4);
 
-    for (i, (text, area)) in items
-        .iter()
-        .zip(vertical_text_spaces.iter()) // skip the first area as that only creates space from the top
-        .enumerate()
-    {
+    for (text, area) in items.iter().zip(vertical_text_spaces.iter()) {
         let text = Line::from(text.as_str());
 
         render_text_in_center_of_rect(frame, Paragraph::new(text), *area);
+    }
+}
+
+pub fn render_settings(
+    frame: &mut Frame,
+    items: &[String],
+    all_widgets: &Vec<&Widget>,
+    active_widget: &Widget,
+    selected_index: usize,
+    rect: Rect,
+) {
+    let mut constraints = Vec::new();
+
+    for _ in 0..items.len() {
+        constraints.push(Constraint::Length(3));
+        constraints.push(Constraint::Percentage(10));
+    }
+
+    let layout = Layout::vertical(constraints).split(rect);
+
+    let input_instructions =
+        Line::from(vec![" Paste ".into(), "<Tab> ".green().bold()]).right_aligned();
+    let slider_instructions = Line::from(vec![
+        " Right".into(),
+        " \u{2190} ".green().into(),
+        "| Left".into(),
+        " \u{2192} ".green().into(),
+    ])
+    .right_aligned();
+
+    for (i, ((text, areas), widget)) in items
+        .iter()
+        .zip(layout.chunks(2))
+        .zip(all_widgets.iter()) // skip the first area as that only creates space from the top
+        .enumerate()
+    {
+        if let [widget_area, _] = areas {
+            let block_text = if i == selected_index {
+                Line::from(format!(" >{}< ", text)).bold().centered()
+            } else {
+                Line::from(text.as_str()).centered()
+            };
+            let widget_block = Block::bordered().title(block_text.clone());
+
+            let inner_input_area = widget_block.inner(*widget_area);
+            let mut color_check = "";
+            let mut style = Style::default();
+
+            match widget {
+                Widget::Input(input) => {
+                    if let Widget::Input(active_input) = active_widget {
+                        if std::ptr::eq(input, active_input) {
+                            frame.set_cursor_position(Position::new(
+                                inner_input_area.x + input.char_index as u16,
+                                inner_input_area.y,
+                            ));
+                        }
+                    }
+                    frame.render_widget(
+                        widget_block.title_bottom(input_instructions.clone()),
+                        *widget_area,
+                    );
+                }
+                Widget::Slider(slider) => {
+                    frame.render_widget(
+                        widget_block.title_bottom(slider_instructions.clone()),
+                        *widget_area,
+                    );
+                    style = Style::default().bg(slider.clone().get_color());
+                    color_check = "     ";
+                }
+            }
+
+            frame.render_widget(
+                Paragraph::new(Line::from(vec![
+                    Span::raw(get_widget_text(&widget)),
+                    Span::raw(" "),
+                    Span::styled(color_check, style),
+                ])),
+                inner_input_area,
+            );
+        }
     }
 }
 
@@ -161,31 +248,10 @@ pub fn calculate_game_area(frame: &Frame) -> (Rect, Rect, f32, f32) {
     (game_area_bounding_box, game_area, scale_x, scale_y)
 }
 
-/// Render all players
-pub fn render_players(
-    players: &[&PlayerDto],
-    our_player_id: Uuid,
-    frame: &mut Frame,
-    game_area: &Rect,
-    scale_x: f32,
-    scale_y: f32,
-) {
-    for player in players {
-        render_player(
-            player,
-            player.id == our_player_id,
-            frame,
-            game_area,
-            scale_x,
-            scale_y,
-        );
-    }
-}
-
 /// Render a single player's paddle
 pub fn render_player(
     player: &PlayerDto,
-    is_our_player: bool,
+    player_color: ratatui::style::Color,
     frame: &mut Frame,
     game_area: &Rect,
     scale_x: f32,
@@ -195,11 +261,7 @@ pub fn render_player(
     const PLAYER_UP_BODY: &str = "▄";
     const PLAYER_BOTTOM_BODY: &str = "▀";
 
-    let player_style = if is_our_player {
-        ratatui::style::Style::default().fg(ratatui::style::Color::Green)
-    } else {
-        ratatui::style::Style::default().fg(ratatui::style::Color::White)
-    };
+    let player_style = ratatui::style::Style::default().fg(player_color);
 
     match player.position {
         Some(PlayerPosition::Top) | Some(PlayerPosition::Bottom) => {
@@ -255,8 +317,10 @@ pub fn render_player(
                 Some(PlayerPosition::Left) => {
                     let paddle_x = game_area.x;
                     frame.render_widget(
-                        Paragraph::new(format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize))
-                            .style(player_style),
+                        Paragraph::new(
+                            format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize),
+                        )
+                        .style(player_style),
                         Rect {
                             x: paddle_x,
                             y: paddle_y,
@@ -271,8 +335,10 @@ pub fn render_player(
                         .saturating_add(game_area.width)
                         .saturating_sub(paddle_thickness);
                     frame.render_widget(
-                        Paragraph::new(format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize))
-                            .style(player_style),
+                        Paragraph::new(
+                            format!("{}\n", PLAYER_VERTICAL_BODY).repeat(paddle_length as usize),
+                        )
+                        .style(player_style),
                         Rect {
                             x: paddle_x,
                             y: paddle_y,
