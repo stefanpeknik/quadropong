@@ -181,6 +181,10 @@ impl Game {
     }
 
     pub fn game_tick(&mut self) {
+        if self.state == GameState::Finished {
+            return;
+        }
+
         self.check_players_health();
 
         if self.state != GameState::Active {
