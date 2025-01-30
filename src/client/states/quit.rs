@@ -1,26 +1,26 @@
 use crate::client::config;
 
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
 pub struct Quit {
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl Quit {
-    pub fn new(settings: config::Config) -> Self {
-        Self { settings }
+    pub fn new(config: config::Config) -> Self {
+        Self { config }
     }
 }
 
 impl State for Quit {}
 
-impl HasSettings for Quit {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for Quit {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 

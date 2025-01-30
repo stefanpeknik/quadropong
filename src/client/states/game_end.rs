@@ -7,31 +7,31 @@ use crate::{client::config, common::models::GameDto};
 
 use super::{
     menu::Menu,
-    traits::{HasSettings, Render, State, Update},
+    traits::{HasConfig, Render, State, Update},
     utils::render::{render_inner_rectangle, render_list, render_outer_rectangle},
 };
 
 pub struct GameEnd {
     game: GameDto,
     our_player_id: Uuid,
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl GameEnd {
-    pub fn new(game: GameDto, our_player_id: Uuid, settings: config::Config) -> Self {
+    pub fn new(game: GameDto, our_player_id: Uuid, config: config::Config) -> Self {
         Self {
             game,
             our_player_id,
-            settings,
+            config,
         }
     }
 }
 
 impl State for GameEnd {}
 
-impl HasSettings for GameEnd {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for GameEnd {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 
@@ -44,7 +44,7 @@ impl Update for GameEnd {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Enter => {
-                    return Ok(Some(Box::new(Menu::new(0, self.settings.clone()))));
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
                 _ => {}
             };

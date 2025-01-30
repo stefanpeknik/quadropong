@@ -28,8 +28,8 @@ impl<T: State> AsAny for T {
     }
 }
 
-pub trait HasSettings {
-    fn settings(&self) -> config::Config;
+pub trait HasConfig {
+    fn config(&self) -> config::Config;
 }
 
-pub trait State: Render + Update + Send + AsAny + HasSettings + 'static {}
+pub trait State: Render + Update + Send + AsAny + HasConfig + 'static {}

@@ -105,7 +105,7 @@ impl App {
                         } else {
                             {
                                 let mut settings = update_settings.lock().await;
-                                *settings = current_state.settings().clone();
+                                *settings = current_state.config().clone();
                             }
                             // Move to the new state
                             *current_state = new_state;

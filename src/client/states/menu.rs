@@ -2,7 +2,7 @@ use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::quit::Quit;
 use super::settings::Settings;
 use super::training::Training;
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 use super::utils::render::{
     into_title, render_inner_rectangle, render_list, render_outer_rectangle,
 };
@@ -32,15 +32,15 @@ impl std::fmt::Display for Options {
 pub struct Menu {
     options: Vec<Options>,
     selected: usize,
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl Menu {
-    pub fn new(selected: usize, settings: config::Config) -> Self {
+    pub fn new(selected: usize, config: config::Config) -> Self {
         Self {
             options: vec![Options::Online, Options::Training, Options::Settings],
             selected,
-            settings,
+            config,
         }
     }
 
@@ -59,9 +59,9 @@ impl Menu {
 
 impl State for Menu {}
 
-impl HasSettings for Menu {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for Menu {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 
@@ -77,19 +77,17 @@ impl Update for Menu {
                 KeyCode::Down => self.next(),
                 KeyCode::Enter => match self.options[self.selected] {
                     Options::Online => {
-                        return Ok(Some(Box::new(CreateOrJoinLobby::new(
-                            self.settings.clone(),
-                        ))));
+                        return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
                     }
                     Options::Training => {
-                        return Ok(Some(Box::new(Training::new(self.settings.clone()))))
+                        return Ok(Some(Box::new(Training::new(self.config.clone()))))
                     }
                     Options::Settings => {
-                        return Ok(Some(Box::new(Settings::new(self.settings.clone()))));
+                        return Ok(Some(Box::new(Settings::new(self.config.clone()))));
                     }
                 },
                 KeyCode::Char('q') => {
-                    return Ok(Some(Box::new(Quit::new(self.settings.clone()))));
+                    return Ok(Some(Box::new(Quit::new(self.config.clone()))));
                 }
                 _ => {}
             };

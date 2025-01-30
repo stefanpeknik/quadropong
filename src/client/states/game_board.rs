@@ -1,22 +1,20 @@
 use crate::client::config;
 use crate::client::net::udp::UdpClient;
-use crate::common::models::{
-    ClientInput, ClientInputType, Direction, GameDto, GameState, PlayerDto,
-};
+use crate::common::models::{ClientInput, ClientInputType, Direction, GameDto, GameState};
 use crate::common::PlayerPosition;
 
 use super::game_end::GameEnd;
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 use super::utils::render::{calculate_game_area, render_ball, render_player};
 
 use crossterm::event::KeyCode;
 use ratatui::layout::{Alignment, Rect};
-use ratatui::symbols::border;
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 
 use uuid::Uuid;
 
@@ -24,10 +22,11 @@ pub struct GameBoard {
     game: Arc<Mutex<GameDto>>,
     our_player_id: Uuid,
     our_player_position: PlayerPosition,
-    receive_updates: Arc<AtomicBool>,
-    receive_update_handle: tokio::task::JoinHandle<()>,
+    cancelation_token: CancellationToken,
+    _receive_update_handle: JoinHandle<()>,
+    _ping_handle: JoinHandle<()>,
     udp_client: Arc<UdpClient>,
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl GameBoard {
@@ -35,7 +34,7 @@ impl GameBoard {
         game: GameDto,
         our_player_id: Uuid,
         udp_client: Arc<UdpClient>,
-        settings: config::Config,
+        config: config::Config,
     ) -> Self {
         let our_player_position = game
             .players
@@ -43,27 +42,51 @@ impl GameBoard {
             .map(|player| player.position.unwrap_or(PlayerPosition::Left)) // TODO: Handle this error better
             .unwrap_or(PlayerPosition::Left); // TODO: Handle this error better
         let game = Arc::new(Mutex::new(game));
-        let receive_updates = Arc::new(AtomicBool::new(true));
-        let receive_updates_clone = Arc::clone(&receive_updates);
+        let cancelation_token = CancellationToken::new();
+
         let game_clone = Arc::clone(&game);
         let udp_client_clone = Arc::clone(&udp_client);
-
+        let cancelation_token_clone = cancelation_token.clone();
         let receive_update_handle = tokio::spawn(async move {
-            while receive_updates_clone.load(Ordering::Relaxed) {
-                match udp_client_clone.recv_updated_game() {
-                    Ok(updated_game) => {
-                        match game_clone.lock() {
-                            Ok(mut current_game) => {
-                                *current_game = updated_game;
+            loop {
+                tokio::select! {
+                    // Exit loop on cancellation
+                    _ = cancelation_token_clone.cancelled() => break,
+                    // Process incoming game updates
+                    result = udp_client_clone.recv_updated_game() => {
+                        match result {
+                            Ok(updated_game) => {
+                                if let Ok(mut current_game) = game_clone.lock() {
+                                    *current_game = updated_game;
+                                }
                             }
-                            Err(_) => {
-                                // TODO: Most likely ignore this error?
-                            }
+                            Err(e) => eprintln!("Receive error: {}", e),
                         }
                     }
-                    Err(_) => {
-                        // TODO: Most likely ignore this error?
-                    }
+                }
+            }
+        });
+
+        let udp_client_clone = Arc::clone(&udp_client);
+        let cancelation_token_clone = cancelation_token.clone();
+        let game_clone = Arc::clone(&game);
+        let ping_handle = tokio::spawn(async move {
+            let ping_interval = std::time::Duration::from_secs(1);
+            loop {
+                tokio::time::sleep(ping_interval).await;
+                let client_input = ClientInput::new(
+                    game_clone
+                        .lock()
+                        .expect("Failed to lock game") // TODO: Handle this error
+                        .id
+                        .to_string(),
+                    our_player_id.to_string(),
+                    ClientInputType::Ping,
+                );
+
+                tokio::select! {
+                    _ = cancelation_token_clone.cancelled() => break,
+                    _ = udp_client_clone.send_client_input(client_input) => {}
                 }
             }
         });
@@ -72,33 +95,32 @@ impl GameBoard {
             game,
             our_player_id,
             our_player_position,
-            receive_update_handle,
-            receive_updates,
+            cancelation_token,
+            _receive_update_handle: receive_update_handle,
+            _ping_handle: ping_handle,
             udp_client,
-            settings,
+            config,
         }
     }
 
-    async fn send_player_move(&self, direction: Direction) -> Result<(), std::io::Error> {
-        if let Ok(game) = self.game.lock() {
-            let client_input = ClientInput::new(
-                game.id.to_string(),
-                self.our_player_id.to_string(),
-                ClientInputType::MovePaddle(direction),
-            );
-            self.udp_client
-                .send_client_input(client_input)
-                .expect("Failed to send input"); // TODO: Handle this error better
-        }
-        Ok(())
+    fn create_move_input(&self, direction: Direction) -> ClientInput {
+        ClientInput::new(
+            self.game
+                .lock()
+                .expect("Failed to lock game")
+                .id
+                .to_string(),
+            self.our_player_id.to_string(),
+            ClientInputType::MovePaddle(direction),
+        )
     }
 }
 
 impl State for GameBoard {}
 
-impl HasSettings for GameBoard {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for GameBoard {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 
@@ -114,7 +136,7 @@ impl Update for GameBoard {
                     return Ok(Some(Box::new(GameEnd::new(
                         game.clone(),
                         self.our_player_id,
-                        self.settings.clone(),
+                        self.config.clone(),
                     ))));
                 }
             }
@@ -129,7 +151,7 @@ impl Update for GameBoard {
                             return Ok(Some(Box::new(GameEnd::new(
                                 game.clone(),
                                 self.our_player_id,
-                                self.settings.clone(),
+                                self.config.clone(),
                             ))));
                         }
                         Err(_) => {}
@@ -138,19 +160,35 @@ impl Update for GameBoard {
                 _ => match self.our_player_position {
                     PlayerPosition::Left | PlayerPosition::Right => match key_code {
                         KeyCode::Up | KeyCode::Char('w') => {
-                            self.send_player_move(Direction::Negative).await?;
+                            let input = self.create_move_input(Direction::Negative);
+                            self.udp_client
+                                .send_client_input(input)
+                                .await
+                                .expect("Failed to send move input");
                         }
                         KeyCode::Down | KeyCode::Char('s') => {
-                            self.send_player_move(Direction::Positive).await?;
+                            let input = self.create_move_input(Direction::Positive);
+                            self.udp_client
+                                .send_client_input(input)
+                                .await
+                                .expect("Failed to send move input");
                         }
                         _ => {}
                     },
                     PlayerPosition::Top | PlayerPosition::Bottom => match key_code {
                         KeyCode::Right | KeyCode::Char('d') => {
-                            self.send_player_move(Direction::Positive).await?;
+                            let input = self.create_move_input(Direction::Positive);
+                            self.udp_client
+                                .send_client_input(input)
+                                .await
+                                .expect("Failed to send move input");
                         }
                         KeyCode::Left | KeyCode::Char('a') => {
-                            self.send_player_move(Direction::Negative).await?;
+                            let input = self.create_move_input(Direction::Negative);
+                            self.udp_client
+                                .send_client_input(input)
+                                .await
+                                .expect("Failed to send move input");
                         }
                         _ => {}
                     },
@@ -231,9 +269,9 @@ impl Render for GameBoard {
             // Render players
             for player in game.players.values() {
                 let player_color = if player.id == self.our_player_id {
-                    self.settings.player_color
+                    self.config.player_color
                 } else {
-                    self.settings.other_players_color
+                    self.config.other_players_color
                 };
                 render_player(player, player_color, frame, &game_area, scale_x, scale_y);
             }
@@ -248,7 +286,6 @@ impl Render for GameBoard {
 
 impl Drop for GameBoard {
     fn drop(&mut self) {
-        self.receive_updates.store(false, Ordering::Relaxed);
-        self.receive_update_handle.abort();
+        self.cancelation_token.cancel();
     }
 }
