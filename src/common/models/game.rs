@@ -166,20 +166,51 @@ impl Game {
             ball.position.x += ball.velocity.x;
             ball.position.y += ball.velocity.y;
 
-            if ball.position.x - ball.radius < 0.0 {
-                ball.position.x = 0.0 + ball.radius;
-                ball.velocity.x *= -1.0;
-            } else if ball.position.x + ball.radius > 10.0 {
-                ball.position.x = 10.0 - ball.radius;
-                ball.velocity.x *= -1.0;
+            const ALL_POSITIONS: &[PlayerPosition] = &[
+                PlayerPosition::Top,
+                PlayerPosition::Bottom,
+                PlayerPosition::Right,
+                PlayerPosition::Left,
+            ];
+            for empty_pos in ALL_POSITIONS.iter().filter(|pos| {
+                self.players
+                    .values()
+                    .all(|player| player.position != Some(**pos))
+            }) {
+                match empty_pos {
+                    PlayerPosition::Top => {
+                        if ball.position.y - ball.radius < 0.0 {
+                            ball.position.y = 0.0 + ball.radius;
+                            ball.velocity.y *= -1.0;
+                        }
+                    }
+                    PlayerPosition::Bottom => {
+                        if ball.position.y + ball.radius > GAME_SIZE {
+                            ball.position.y = 10.0 - ball.radius;
+                            ball.velocity.y *= -1.0;
+                        }
+                    }
+                    PlayerPosition::Left => {
+                        if ball.position.x - ball.radius < 0.0 {
+                            ball.position.x = 0.0 + ball.radius;
+                            ball.velocity.x *= -1.0;
+                        }
+                    }
+                    PlayerPosition::Right => {
+                        if ball.position.x + ball.radius > GAME_SIZE {
+                            ball.position.x = 10.0 - ball.radius;
+                            ball.velocity.x *= -1.0;
+                        }
+                    }
+                }
             }
 
-            if ball.position.y - ball.radius < 0.0 {
-                ball.position.y = 0.0 + ball.radius;
-                ball.velocity.y *= -1.0;
-            } else if ball.position.y + ball.radius > 10.0 {
-                ball.position.y = 10.0 - ball.radius;
-                ball.velocity.y *= -1.0;
+            if ball.position.x - ball.radius < 0.0
+                || ball.position.x + ball.radius > 10.0
+                || ball.position.y - ball.radius < 0.0
+                || ball.position.y + ball.radius > 10.0
+            {
+                self.goal_action();
             }
         }
 

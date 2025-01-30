@@ -1,5 +1,5 @@
-use crate::client::net::udp::UdpClient;
 use crate::client::config;
+use crate::client::net::udp::UdpClient;
 use crate::common::models::{
     ClientInput, ClientInputType, Direction, GameDto, GameState, PlayerDto,
 };
@@ -10,7 +10,10 @@ use super::traits::{HasSettings, Render, State, Update};
 use super::utils::render::{calculate_game_area, render_ball, render_player};
 
 use crossterm::event::KeyCode;
-use ratatui::widgets::Block;
+use ratatui::layout::{Alignment, Rect};
+use ratatui::symbols::border;
+use ratatui::text::Line;
+use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -165,10 +168,65 @@ impl Render for GameBoard {
             let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(&frame);
 
             // Render the game area border
-            frame.render_widget(
-                Block::bordered().title_bottom("press Enter to \"finish\" the game"), // TODO
-                game_area_bounding_box,
-            );
+            frame.render_widget(Block::bordered(), game_area_bounding_box);
+
+            // Render players scores
+            for player in game.players.values() {
+                let desc = format!(" {} {} ", player.name, player.score);
+                let desc_len = desc.len() as u16;
+
+                match player.position {
+                    Some(PlayerPosition::Top) => {
+                        // Position at top-center of the game area
+                        let x = game_area_bounding_box.x + game_area_bounding_box.width / 2
+                            - desc_len / 2;
+                        let y = game_area_bounding_box.y;
+                        frame.render_widget(
+                            Paragraph::new(desc).alignment(Alignment::Center),
+                            Rect::new(x, y, desc_len, 1),
+                        );
+                    }
+                    Some(PlayerPosition::Bottom) => {
+                        // Position at bottom-center of the game area
+                        let x = game_area_bounding_box.x + game_area_bounding_box.width / 2
+                            - desc_len / 2;
+                        let y = game_area_bounding_box.y + game_area_bounding_box.height - 1;
+                        frame.render_widget(
+                            Paragraph::new(desc).alignment(Alignment::Center),
+                            Rect::new(x, y, desc_len, 1),
+                        );
+                    }
+                    Some(PlayerPosition::Left) => {
+                        // Vertical text on the left side
+                        let x = game_area_bounding_box.x;
+                        let y = game_area_bounding_box.y + game_area_bounding_box.height / 2
+                            - desc_len / 2;
+                        frame.render_widget(
+                            Paragraph::new(
+                                desc.chars()
+                                    .map(|c| Line::from(c.to_string()))
+                                    .collect::<Vec<Line>>(),
+                            ),
+                            Rect::new(x, y, 1, desc_len),
+                        );
+                    }
+                    Some(PlayerPosition::Right) => {
+                        // Vertical text on the right side
+                        let x = game_area_bounding_box.x + game_area_bounding_box.width - 1;
+                        let y = game_area_bounding_box.y + game_area_bounding_box.height / 2
+                            - desc_len / 2;
+                        frame.render_widget(
+                            Paragraph::new(
+                                desc.chars()
+                                    .map(|c| Line::from(c.to_string()))
+                                    .collect::<Vec<Line>>(),
+                            ),
+                            Rect::new(x, y, 1, desc_len),
+                        );
+                    }
+                    None => {}
+                }
+            }
 
             // Render players
             for player in game.players.values() {
