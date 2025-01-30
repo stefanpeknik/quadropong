@@ -6,7 +6,7 @@ use super::traits::{HasSettings, Render, State, Update};
 use super::utils::render::{
     into_title, render_inner_rectangle, render_list, render_outer_rectangle,
 };
-use crate::client::config;
+use crate::client::settings;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
@@ -32,11 +32,11 @@ impl std::fmt::Display for Options {
 pub struct Menu {
     options: Vec<Options>,
     selected: usize,
-    settings: config::Config,
+    settings: settings::Settings,
 }
 
 impl Menu {
-    pub fn new(selected: usize, settings: config::Config) -> Self {
+    pub fn new(selected: usize, settings: settings::Settings) -> Self {
         Self {
             options: vec![Options::Online, Options::Training, Options::Settings],
             selected,
@@ -60,7 +60,7 @@ impl Menu {
 impl State for Menu {}
 
 impl HasSettings for Menu {
-    fn settings(&self) -> config::Config {
+    fn settings(&self) -> settings::Settings {
         self.settings.clone()
     }
 }

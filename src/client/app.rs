@@ -18,7 +18,7 @@ use ratatui::{
 };
 
 use super::{
-    config::Config,
+    settings::Settings,
     states::{menu::Menu, quit::Quit, traits::State},
 };
 
@@ -47,11 +47,11 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result
 
 pub struct App {
     current_state: Arc<Mutex<Box<dyn State>>>,
-    settings: Arc<Mutex<Config>>,
+    settings: Arc<Mutex<Settings>>,
 }
 
 impl App {
-    pub fn new(settings: Config) -> Self {
+    pub fn new(settings: Settings) -> Self {
         Self {
             current_state: Arc::new(Mutex::new(Box::new(Menu::new(0, settings.clone())))),
             settings: Arc::new(Mutex::new(settings)),

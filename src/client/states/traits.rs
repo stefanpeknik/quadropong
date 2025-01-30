@@ -4,7 +4,7 @@ use std::any::Any;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
-use crate::client::config;
+use crate::client::settings;
 
 pub trait Render {
     fn render(&self, frame: &mut Frame);
@@ -29,7 +29,7 @@ impl<T: State> AsAny for T {
 }
 
 pub trait HasSettings {
-    fn settings(&self) -> config::Config;
+    fn settings(&self) -> settings::Settings;
 }
 
 pub trait State: Render + Update + Send + AsAny + HasSettings + 'static {}
