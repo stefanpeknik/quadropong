@@ -74,7 +74,7 @@ async fn main() {
 
             let mut rooms = game_rooms_loop.lock().await;
             for game in rooms.lobbies.values_mut() {
-                game.update_ball_position();
+                game.game_tick();
             }
         }
     });

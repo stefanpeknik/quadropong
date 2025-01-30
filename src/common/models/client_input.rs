@@ -11,6 +11,7 @@ pub enum ClientInputType {
     PlayerReady,
     MovePaddle(Direction),
     Disconnect,
+    Ping,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

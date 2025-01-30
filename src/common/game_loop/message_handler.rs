@@ -44,10 +44,11 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
     match input.action {
         ClientInputType::JoinGame => {
             player.addr = Some(addr);
+            player.ping_timestamp = Some(chrono::Utc::now());
             println!("game {}: new player joined", game_id);
         }
         ClientInputType::PlayerReady => {
-            player.is_ready = true;
+            player.is_ready = !player.is_ready;
 
             if game.start_game().is_ok() {
                 println!("game {}: started", game_id);
@@ -72,6 +73,9 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
         ClientInputType::Disconnect => {
             println!("game {}: player {} disconnected", game_id, player_id);
             game.remove_player(player_id);
+        }
+        ClientInputType::Ping => {
+            player.ping_timestamp = Some(chrono::Utc::now());
         }
         _ => {
             println!("Invalid action");

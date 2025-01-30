@@ -1,7 +1,8 @@
-use chrono;
+use chrono::{self, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::f32::consts::PI;
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::common::game_error::GameError;
@@ -17,6 +18,7 @@ const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
 const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
 const GAME_SIZE: f32 = 10.0; // Since it's a square
 const MAX_PLAYERS: usize = 4;
+const PING_TIMEOUT: u64 = 5000; // 5 seconds
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -83,6 +85,9 @@ impl Game {
 
     pub fn remove_player(&mut self, id: Uuid) {
         self.players.remove(&id);
+        if self.players.len() < 2 {
+            self.set_game_state(GameState::Finished);
+        }
     }
 
     pub fn set_game_state(&mut self, state: GameState) {
@@ -158,10 +163,30 @@ impl Game {
         }
     }
 
-    pub fn update_ball_position(&mut self) {
+    pub fn check_players_health(&mut self) {
+        let current_time = Utc::now();
+
+        for player in self.players.values_mut() {
+            if let Some(last_ping_timestamp) = player.ping_timestamp {
+                let elapsed = current_time
+                    .signed_duration_since(last_ping_timestamp)
+                    .to_std()
+                    .unwrap_or(Duration::from_secs(0));
+
+                if elapsed.as_millis() as u64 > PING_TIMEOUT {
+                    println!("Player is dead :((");
+                }
+            }
+        }
+    }
+
+    pub fn game_tick(&mut self) {
+        self.check_players_health();
+
         if self.state != GameState::Active {
             return;
         }
+
         if let Some(ball) = &mut self.ball {
             ball.position.x += ball.velocity.x;
             ball.position.y += ball.velocity.y;
@@ -258,7 +283,6 @@ impl Game {
 
                             ball.position.y = paddle_y + ball.radius;
 
-                            player.increment_score();
                             ball.last_touched_by = Some(player.id);
                         }
                     }
@@ -285,7 +309,6 @@ impl Game {
 
                             ball.position.y = paddle_y - ball.radius;
 
-                            player.increment_score();
                             ball.last_touched_by = Some(player.id);
                         }
                     }
@@ -339,7 +362,6 @@ impl Game {
 
                             ball.position.x = paddle_x - ball.radius;
 
-                            player.increment_score();
                             ball.last_touched_by = Some(player.id);
                         }
                     }
