@@ -110,15 +110,12 @@ impl Game {
             return Err(GameError::InvalidStateTransition);
         }
 
-        // Filter players with `addr` assigned - there must be at least 2 players to start the game
-        let joined_players = self
-            .players
-            .values()
-            .filter(|player| player.addr.is_some())
-            .count();
-
-        if joined_players < 2 {
+        if self.players.values().count() < 2 {
             return Err(GameError::InvalidStateTransition);
+        }
+
+        if self.players.values().any(|player| !player.is_ready) {
+            return Err(GameError::PlayersNotReady);
         }
 
         self.started_at = Some(chrono::Utc::now());

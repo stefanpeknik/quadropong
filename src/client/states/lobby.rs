@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::client::net::udp::UdpClient;
 use crate::client::settings;
-use crate::common::models::{ClientInput, ClientInputType, GameDto};
+use crate::common::models::{ClientInput, ClientInputType, GameDto, GameState};
 use crate::common::Game;
 
 use super::create_or_join_lobby::CreateOrJoinLobby;
@@ -124,6 +124,18 @@ impl Update for Lobby {
         &mut self,
         key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+        // if game is started
+        if let Ok(game) = self.game.lock() {
+            if game.state == GameState::Active {
+                return Ok(Some(Box::new(GameBoard::new(
+                    game.clone(),
+                    self.our_player_id,
+                    Arc::clone(&self.udp_client),
+                    self.settings.clone(),
+                ))));
+            }
+        }
+
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Tab => {
@@ -142,16 +154,19 @@ impl Update for Lobby {
                 KeyCode::Enter => match self.options[self.selected] {
                     // TODO: Implement this
                     _ => {
-                        // TODO: for now send into game
-                        return Ok(Some(Box::new(GameBoard::new(
+                        // send player ready
+                        let client_input = ClientInput::new(
                             self.game
                                 .lock()
                                 .expect("Failed to lock game") // TODO: Handle this error
-                                .to_owned(),
-                            self.our_player_id,
-                            Arc::clone(&self.udp_client),
-                            self.settings.clone(),
-                        ))));
+                                .id
+                                .to_string(),
+                            self.our_player_id.to_string(),
+                            ClientInputType::PlayerReady,
+                        );
+                        self.udp_client
+                            .send_client_input(client_input)
+                            .expect("Failed to send player ready message"); // TODO: Handle this error
                     }
                 },
                 KeyCode::Esc => {
