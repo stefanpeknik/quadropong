@@ -18,7 +18,7 @@ const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
 const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
 const GAME_SIZE: f32 = 10.0; // Since it's a square
 const MAX_PLAYERS: usize = 4;
-const PING_TIMEOUT: u64 = 5000; // 5 seconds
+const PING_TIMEOUT: u64 = 2000; // 2 seconds
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -166,17 +166,30 @@ impl Game {
     pub fn check_players_health(&mut self) {
         let current_time = Utc::now();
 
-        for player in self.players.values_mut() {
-            if let Some(last_ping_timestamp) = player.ping_timestamp {
-                let elapsed = current_time
-                    .signed_duration_since(last_ping_timestamp)
-                    .to_std()
-                    .unwrap_or(Duration::from_secs(0));
+        let players_to_remove: Vec<_> = self
+            .players
+            .values()
+            .filter_map(|player| {
+                if let Some(last_ping_timestamp) = player.ping_timestamp {
+                    let elapsed = current_time
+                        .signed_duration_since(last_ping_timestamp)
+                        .to_std()
+                        .unwrap_or(Duration::from_secs(0));
 
-                if elapsed.as_millis() as u64 > PING_TIMEOUT {
-                    println!("Player is dead :((");
+                    if elapsed.as_millis() as u64 > PING_TIMEOUT {
+                        Some(player.id)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
-            }
+            })
+            .collect();
+
+        for player_id in players_to_remove {
+            println!("player {} timed out", player_id);
+            self.remove_player(player_id);
         }
     }
 
