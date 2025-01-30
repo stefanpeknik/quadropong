@@ -1,4 +1,4 @@
-use crate::client::config;
+use crate::client::settings;
 
 use super::menu::Menu;
 use super::traits::{HasSettings, Render, State, Update};
@@ -24,11 +24,11 @@ impl std::fmt::Display for Options {
 pub struct Training {
     options: Vec<Options>,
     selected: usize,
-    settings: config::Config,
+    settings: settings::Settings,
 }
 
 impl Training {
-    pub fn new(settings: config::Config) -> Self {
+    pub fn new(settings: settings::Settings) -> Self {
         Self {
             options: vec![Options::TODO],
             selected: 0,
@@ -51,7 +51,7 @@ impl Training {
 impl State for Training {}
 
 impl HasSettings for Training {
-    fn settings(&self) -> config::Config {
+    fn settings(&self) -> settings::Settings {
         self.settings.clone()
     }
 }

@@ -1,5 +1,5 @@
 use crate::client::net::tcp::TcpClient;
-use crate::client::config;
+use crate::client::settings;
 
 use super::lobby::Lobby;
 use super::menu::Menu;
@@ -38,11 +38,11 @@ pub struct CreateOrJoinLobby {
     join_lobby_input: Input,
     error_message: Option<String>,
     tcp_client: TcpClient,
-    settings: config::Config,
+    settings: settings::Settings,
 }
 
 impl CreateOrJoinLobby {
-    pub fn new(settings: config::Config) -> Self {
+    pub fn new(settings: settings::Settings) -> Self {
         Self {
             options: vec![Options::Create, Options::Join],
             selected: 0,
@@ -69,7 +69,7 @@ impl CreateOrJoinLobby {
 impl State for CreateOrJoinLobby {}
 
 impl HasSettings for CreateOrJoinLobby {
-    fn settings(&self) -> config::Config {
+    fn settings(&self) -> settings::Settings {
         self.settings.clone()
     }
 }

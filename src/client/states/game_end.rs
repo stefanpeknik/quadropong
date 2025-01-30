@@ -3,7 +3,7 @@ use crossterm::event::KeyCode;
 use ratatui::Frame;
 use uuid::Uuid;
 
-use crate::{client::config, common::models::GameDto};
+use crate::{client::settings, common::models::GameDto};
 
 use super::{
     menu::Menu,
@@ -14,11 +14,11 @@ use super::{
 pub struct GameEnd {
     game: GameDto,
     our_player_id: Uuid,
-    settings: config::Config,
+    settings: settings::Settings,
 }
 
 impl GameEnd {
-    pub fn new(game: GameDto, our_player_id: Uuid, settings: config::Config) -> Self {
+    pub fn new(game: GameDto, our_player_id: Uuid, settings: settings::Settings) -> Self {
         Self {
             game,
             our_player_id,
@@ -30,7 +30,7 @@ impl GameEnd {
 impl State for GameEnd {}
 
 impl HasSettings for GameEnd {
-    fn settings(&self) -> config::Config {
+    fn settings(&self) -> settings::Settings {
         self.settings.clone()
     }
 }

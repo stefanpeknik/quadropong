@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::net::udp::UdpClient;
-use crate::client::config;
+use crate::client::settings;
 use crate::common::models::{ClientInput, ClientInputType, GameDto, GameState};
 use crate::common::Game;
 
@@ -40,11 +40,11 @@ pub struct Lobby {
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
     udp_client: Arc<UdpClient>,
-    settings: config::Config,
+    settings: settings::Settings,
 }
 
 impl Lobby {
-    pub fn new(game: Game, our_player_id: Uuid, settings: config::Config) -> Self {
+    pub fn new(game: Game, our_player_id: Uuid, settings: settings::Settings) -> Self {
         let udp_client =
             Arc::new(UdpClient::new(&settings.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
 
@@ -113,7 +113,7 @@ impl Lobby {
 impl State for Lobby {}
 
 impl HasSettings for Lobby {
-    fn settings(&self) -> config::Config {
+    fn settings(&self) -> settings::Settings {
         self.settings.clone()
     }
 }
