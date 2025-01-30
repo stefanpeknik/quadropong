@@ -208,13 +208,9 @@ impl Render for Lobby {
                 .iter()
                 .map(|(p_id, p)| {
                     if *p_id == self.our_player_id {
-                        (
-                            format!("{} (You): {}", p.name, p_id),
-                            p.joined_at,
-                            p.is_ready,
-                        )
+                        (format!("{} (You)", p.name), p.joined_at, p.is_ready)
                     } else {
-                        (format!("{}: {}", p.name, p_id), p.joined_at, p.is_ready)
+                        (p.name.clone(), p.joined_at, p.is_ready)
                     }
                 })
                 .collect();

@@ -98,27 +98,20 @@ pub fn render_player_list(
     let vertical_text_spaces = evenly_distanced_rects(rect, 4);
 
     for ((text, is_ready), area) in items.iter().zip(vertical_text_spaces.iter()) {
-        // let [area1, area2] = Layout::default()
-        //     .direction(Direction::Horizontal)
-        //     .constraints(vec![
-        //         Constraint::Percentage(80),
-        //         Constraint::Percentage(20),
-        //     ])
-        //     .split(*area);
+        let [text_area, ready_area] =
+            Layout::horizontal(vec![Constraint::Percentage(100), Constraint::Length(1)])
+                .areas(*area);
 
-        let ready_symbol = if *is_ready { "✓" } else { "X" };
-        let ready_style = if *is_ready {
-            Style::default().fg(Color::Green)
-        } else {
-            Style::default().fg(Color::Red)
-        };
-        let text = Line::from(vec![
-            Span::raw(text),
-            Span::raw("     "),
-            Span::styled(ready_symbol, ready_style),
-        ]);
+        let ready_symbol = if *is_ready { "✓".green() } else { "X".red() };
 
-        render_text_in_center_of_rect(frame, Paragraph::new(text), *area);
+        frame.render_widget(
+            Paragraph::new(Line::from(text.clone())).centered(),
+            evenly_distanced_rects(text_area, 2)[1],
+        );
+        frame.render_widget(
+            Paragraph::new(Line::from(ready_symbol).right_aligned()),
+            evenly_distanced_rects(ready_area, 2)[1],
+        );
     }
 }
 
