@@ -1,7 +1,7 @@
 use crate::client::config;
 
 use super::menu::Menu;
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 use super::utils::render::{render_inner_rectangle, render_list, render_outer_rectangle};
 
 use axum::async_trait;
@@ -24,15 +24,15 @@ impl std::fmt::Display for Options {
 pub struct Training {
     options: Vec<Options>,
     selected: usize,
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl Training {
-    pub fn new(settings: config::Config) -> Self {
+    pub fn new(config: config::Config) -> Self {
         Self {
             options: vec![Options::TODO],
             selected: 0,
-            settings,
+            config,
         }
     }
     fn next(&mut self) {
@@ -50,9 +50,9 @@ impl Training {
 
 impl State for Training {}
 
-impl HasSettings for Training {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for Training {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 
@@ -71,7 +71,7 @@ impl Update for Training {
                     _ => {}
                 },
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(1, self.settings.clone()))));
+                    return Ok(Some(Box::new(Menu::new(1, self.config.clone()))));
                 }
                 _ => {}
             };

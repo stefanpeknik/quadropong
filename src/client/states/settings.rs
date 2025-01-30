@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use crate::client::config;
 
 use super::menu::Menu;
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{into_title, render_outer_rectangle, render_settings};
 use super::utils::slider::Slider;
@@ -36,16 +36,16 @@ impl std::fmt::Display for Options {
 pub struct Settings {
     options: Vec<Options>,
     selected: usize,
-    settings: Mutex<config::Config>,
+    config: Mutex<config::Config>,
 }
 
 impl Settings {
-    pub fn new(settings: config::Config) -> Self {
-        let options = Self::fill_settings(settings.clone());
+    pub fn new(config: config::Config) -> Self {
+        let options = Self::fill_settings(config.clone());
         Self {
             options,
             selected: 0,
-            settings: Mutex::new(settings),
+            config: Mutex::new(config),
         }
     }
 
@@ -107,9 +107,9 @@ impl Settings {
 
 impl State for Settings {}
 
-impl HasSettings for Settings {
-    fn settings(&self) -> config::Config {
-        self.settings.lock().unwrap().clone() // TODO: Check if this is correct
+impl HasConfig for Settings {
+    fn config(&self) -> config::Config {
+        self.config.lock().unwrap().clone() // TODO: Check if this is correct
     }
 }
 
@@ -138,20 +138,20 @@ impl Update for Settings {
                             input.handle_key_event(key_code);
                         }
                     }
-                    if let Ok(mut settings) = self.settings.lock() {
+                    if let Ok(mut settings) = self.config.lock() {
                         // save selected option to settings
                         settings.save_option(&self.options[self.selected]);
                     }
                 }
                 KeyCode::Esc => {
-                    if let Ok(mut settings) = self.settings.lock() {
+                    if let Ok(mut settings) = self.config.lock() {
                         // save to config file before exiting screen
                         let _ = settings.save_config();
                         return Ok(Some(Box::new(Menu::new(2, settings.clone()))));
                     }
                 }
                 KeyCode::End => {
-                    if let Ok(mut settings) = self.settings.lock() {
+                    if let Ok(mut settings) = self.config.lock() {
                         // load default settings
                         *settings = config::Config::default();
                         self.options = Self::fill_settings(config::Config::default());
@@ -186,7 +186,7 @@ impl Render for Settings {
             vertical: 5,
         });
 
-        if let Ok(_settings) = self.settings.lock() {
+        if let Ok(_settings) = self.config.lock() {
             let selected_index = self.selected;
             render_settings(
                 frame,

@@ -1,9 +1,9 @@
-use crate::client::net::tcp::TcpClient;
 use crate::client::config;
+use crate::client::net::tcp::TcpClient;
 
 use super::lobby::Lobby;
 use super::menu::Menu;
-use super::traits::{HasSettings, Render, State, Update};
+use super::traits::{HasConfig, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{
     evenly_distanced_rects, into_title, render_inner_rectangle, render_outer_rectangle,
@@ -38,18 +38,18 @@ pub struct CreateOrJoinLobby {
     join_lobby_input: Input,
     error_message: Option<String>,
     tcp_client: TcpClient,
-    settings: config::Config,
+    config: config::Config,
 }
 
 impl CreateOrJoinLobby {
-    pub fn new(settings: config::Config) -> Self {
+    pub fn new(config: config::Config) -> Self {
         Self {
             options: vec![Options::Create, Options::Join],
             selected: 0,
             join_lobby_input: Input::new(),
             error_message: None,
-            tcp_client: TcpClient::new(&settings.api_url),
-            settings,
+            tcp_client: TcpClient::new(&config.api_url),
+            config,
         }
     }
 
@@ -68,9 +68,9 @@ impl CreateOrJoinLobby {
 
 impl State for CreateOrJoinLobby {}
 
-impl HasSettings for CreateOrJoinLobby {
-    fn settings(&self) -> config::Config {
-        self.settings.clone()
+impl HasConfig for CreateOrJoinLobby {
+    fn config(&self) -> config::Config {
+        self.config.clone()
     }
 }
 
@@ -86,7 +86,7 @@ impl Update for CreateOrJoinLobby {
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
                 KeyCode::Esc => {
-                    return Ok(Some(Box::new(Menu::new(0, self.settings.clone()))));
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
 
                 _ => {}
@@ -98,7 +98,7 @@ impl Update for CreateOrJoinLobby {
                         // Game is created, but we need to join it to get our player id
                         Ok(game) => match self
                             .tcp_client
-                            .join_game(game.id, Some(self.settings.player_name.clone()))
+                            .join_game(game.id, Some(self.config.player_name.clone()))
                             .await
                         {
                             // We successfully joined the game
@@ -106,7 +106,7 @@ impl Update for CreateOrJoinLobby {
                                 return Ok(Some(Box::new(Lobby::new(
                                     game,
                                     our_player.id,
-                                    self.settings.clone(),
+                                    self.config.clone(),
                                 ))));
                             }
                             Err(e) => {
@@ -131,14 +131,14 @@ impl Update for CreateOrJoinLobby {
                                 match self.tcp_client.get_game(inputted_game_id).await {
                                     Ok(game) => match self
                                         .tcp_client
-                                        .join_game(game.id, Some(self.settings.player_name.clone()))
+                                        .join_game(game.id, Some(self.config.player_name.clone()))
                                         .await
                                     {
                                         Ok(our_player) => {
                                             return Ok(Some(Box::new(Lobby::new(
                                                 game,
                                                 our_player.id,
-                                                self.settings.clone(),
+                                                self.config.clone(),
                                             ))));
                                         }
                                         Err(e) => {

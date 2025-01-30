@@ -1,35 +1,32 @@
-use std::net::UdpSocket;
-use std::time::Duration;
-
 use crate::common::models::{ClientInput, GameDto};
 
 use super::error::UdpError;
 
 pub struct UdpClient {
     server_addr: String,
-    socket: UdpSocket,
+    socket: tokio::net::UdpSocket,
 }
 
 impl UdpClient {
     pub fn new(server_addr: &str) -> Result<Self, UdpError> {
-        let socket = UdpSocket::bind("0.0.0.0:0")?;
-        socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-        socket.set_write_timeout(Some(Duration::from_secs(5)))?;
+        let socket = std::net::UdpSocket::bind("0.0.0.0:0")?;
+        // socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+        // socket.set_write_timeout(Some(Duration::from_secs(5)))?;
         Ok(Self {
             server_addr: server_addr.to_string(),
-            socket,
+            socket: tokio::net::UdpSocket::from_std(socket)?,
         })
     }
 
-    pub fn send_client_input(&self, client_input: ClientInput) -> Result<(), UdpError> {
+    pub async fn send_client_input(&self, client_input: ClientInput) -> Result<(), UdpError> {
         let serialized = rmp_serde::to_vec(&client_input)?;
-        self.socket.send_to(&serialized, &self.server_addr)?;
+        self.socket.send_to(&serialized, &self.server_addr).await?;
         Ok(())
     }
 
-    pub fn recv_updated_game(&self) -> Result<GameDto, UdpError> {
+    pub async fn recv_updated_game(&self) -> Result<GameDto, UdpError> {
         let mut buf = [0; 1024];
-        let (len, addr) = self.socket.recv_from(&mut buf)?;
+        let (len, addr) = self.socket.recv_from(&mut buf).await?;
         if addr.to_string() != self.server_addr {
             return Err(UdpError::InvalidSource);
         }
