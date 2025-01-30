@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use crate::client::settings;
+use crate::client::config;
 
 use super::menu::Menu;
 use super::traits::{HasSettings, Render, State, Update};
@@ -36,11 +36,11 @@ impl std::fmt::Display for Options {
 pub struct Settings {
     options: Vec<Options>,
     selected: usize,
-    settings: Mutex<settings::Settings>,
+    settings: Mutex<config::Config>,
 }
 
 impl Settings {
-    pub fn new(settings: settings::Settings) -> Self {
+    pub fn new(settings: config::Config) -> Self {
         let options = Self::fill_settings(settings.clone());
         Self {
             options,
@@ -49,7 +49,7 @@ impl Settings {
         }
     }
 
-    fn fill_settings(settings: settings::Settings) -> Vec<Options> {
+    fn fill_settings(settings: config::Config) -> Vec<Options> {
         vec![
             Options::PlayerName(Widget::Input(Input::from(settings.player_name.to_string()))),
             Options::PlayerColor(Widget::Slider(Slider::from(
@@ -108,7 +108,7 @@ impl Settings {
 impl State for Settings {}
 
 impl HasSettings for Settings {
-    fn settings(&self) -> settings::Settings {
+    fn settings(&self) -> config::Config {
         self.settings.lock().unwrap().clone() // TODO: Check if this is correct
     }
 }
@@ -153,8 +153,8 @@ impl Update for Settings {
                 KeyCode::End => {
                     if let Ok(mut settings) = self.settings.lock() {
                         // load default settings
-                        *settings = settings::Settings::default();
-                        self.options = Self::fill_settings(settings::Settings::default());
+                        *settings = config::Config::default();
+                        self.options = Self::fill_settings(config::Config::default());
                     }
                 }
                 _ => {}

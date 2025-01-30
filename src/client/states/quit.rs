@@ -1,4 +1,4 @@
-use crate::client::settings;
+use crate::client::config;
 
 use super::traits::{HasSettings, Render, State, Update};
 
@@ -7,11 +7,11 @@ use crossterm::event::KeyCode;
 use ratatui::Frame;
 
 pub struct Quit {
-    settings: settings::Settings,
+    settings: config::Config,
 }
 
 impl Quit {
-    pub fn new(settings: settings::Settings) -> Self {
+    pub fn new(settings: config::Config) -> Self {
         Self { settings }
     }
 }
@@ -19,7 +19,7 @@ impl Quit {
 impl State for Quit {}
 
 impl HasSettings for Quit {
-    fn settings(&self) -> settings::Settings {
+    fn settings(&self) -> config::Config {
         self.settings.clone()
     }
 }
