@@ -10,4 +10,6 @@ pub enum GameError {
     PlayerNotFound,
     #[error("Invalid game state transition")]
     InvalidStateTransition,
+    #[error("Players are not ready")]
+    PlayersNotReady,
 }

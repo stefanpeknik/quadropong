@@ -8,7 +8,7 @@ pub enum ClientInputType {
     LeaveGame,
     PauseGame,
     ResumeGame,
-    StartGame,
+    PlayerReady,
     MovePaddle(Direction),
     Disconnect,
 }

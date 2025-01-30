@@ -13,6 +13,7 @@ pub struct PlayerDto {
     pub paddle_position: f32,
     pub paddle_delta: f32,
     pub paddle_width: f32,
+    pub is_ready: bool,
 }
 
 impl From<Player> for PlayerDto {
@@ -26,6 +27,7 @@ impl From<Player> for PlayerDto {
             paddle_position: player.paddle_position,
             paddle_delta: player.paddle_delta,
             paddle_width: player.paddle_width,
+            is_ready: player.is_ready,
         }
     }
 }

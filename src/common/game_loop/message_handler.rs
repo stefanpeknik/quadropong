@@ -46,7 +46,9 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
             player.addr = Some(addr);
             println!("game {}: new player joined", game_id);
         }
-        ClientInputType::StartGame => {
+        ClientInputType::PlayerReady => {
+            player.is_ready = true;
+
             if game.start_game().is_ok() {
                 println!("game {}: started", game_id);
                 game.ball = Some(Ball::new());

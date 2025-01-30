@@ -22,6 +22,7 @@ pub struct Player {
     pub paddle_position: f32,
     pub paddle_delta: f32,
     pub paddle_width: f32,
+    pub is_ready: bool,
 }
 
 impl Player {
@@ -36,6 +37,7 @@ impl Player {
             paddle_delta: 0.15,
             paddle_position: 5.0,
             paddle_width: 1.0,
+            is_ready: false,
         }
     }
 
