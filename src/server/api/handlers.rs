@@ -24,10 +24,13 @@ pub async fn join_game(
         .ok_or(StatusCode::NOT_FOUND)?;
 
     // Generate player name based on request or player count
-    let player_name = payload.username.unwrap_or_else(|| {
-        let player_number = game.players.len() + 1;
-        format!("player_{}", player_number)
-    });
+    let player_name = match payload.username {
+        Some(name) if !name.is_empty() => name,
+        _ => {
+            let player_number = game.players.len() + 1;
+            format!("player_{}", player_number)
+        }
+    };
 
     let player_positions = game.assign_position();
 
