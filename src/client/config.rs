@@ -9,7 +9,7 @@ use super::states::{
 };
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Settings {
+pub struct Config {
     pub player_name: String,
     pub api_url: String,
     pub socket_addr: String,
@@ -18,7 +18,7 @@ pub struct Settings {
     pub fps: u32,
 }
 
-impl Default for Settings {
+impl Default for Config {
     fn default() -> Self {
         Self {
             player_name: "player".to_string(),
@@ -31,7 +31,7 @@ impl Default for Settings {
     }
 }
 
-impl Settings {
+impl Config {
     pub fn to_vec(&self) -> Vec<String> {
         vec![
             self.player_name.clone(),
@@ -64,7 +64,7 @@ impl Settings {
         Ok(())
     }
 
-    pub fn load_config() -> Result<Settings, io::Error> {
+    pub fn load_config() -> Result<Config, io::Error> {
         if let Some(config_path) = Self::get_config_path() {
             let config_data = if config_path.exists() {
                 let data = std::fs::read_to_string(&config_path)?;
@@ -78,7 +78,7 @@ impl Settings {
             };
 
             match config_data {
-                Some(data) => match serde_json::from_str::<Settings>(&data) {
+                Some(data) => match serde_json::from_str::<Config>(&data) {
                     Ok(settings) => Ok(settings),
                     Err(_e) => {
                         // When serde fails load default and save old settings to recoverable file
