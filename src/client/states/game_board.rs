@@ -1,5 +1,5 @@
 use crate::client::net::udp::UdpClient;
-use crate::client::settings;
+use crate::client::config;
 use crate::common::models::{
     ClientInput, ClientInputType, Direction, GameDto, GameState, PlayerDto,
 };
@@ -24,7 +24,7 @@ pub struct GameBoard {
     receive_updates: Arc<AtomicBool>,
     receive_update_handle: tokio::task::JoinHandle<()>,
     udp_client: Arc<UdpClient>,
-    settings: settings::Settings,
+    settings: config::Config,
 }
 
 impl GameBoard {
@@ -32,7 +32,7 @@ impl GameBoard {
         game: GameDto,
         our_player_id: Uuid,
         udp_client: Arc<UdpClient>,
-        settings: settings::Settings,
+        settings: config::Config,
     ) -> Self {
         let our_player_position = game
             .players
@@ -94,7 +94,7 @@ impl GameBoard {
 impl State for GameBoard {}
 
 impl HasSettings for GameBoard {
-    fn settings(&self) -> settings::Settings {
+    fn settings(&self) -> config::Config {
         self.settings.clone()
     }
 }
