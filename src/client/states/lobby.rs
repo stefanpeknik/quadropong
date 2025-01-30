@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::client::net::udp::UdpClient;
 use crate::client::config;
+use crate::client::net::udp::UdpClient;
 use crate::common::models::{ClientInput, ClientInputType, GameDto, GameState};
 use crate::common::Game;
 
@@ -208,18 +208,22 @@ impl Render for Lobby {
                 .iter()
                 .map(|(p_id, p)| {
                     if *p_id == self.our_player_id {
-                        (format!("You ({}): {}", p.name, p_id), p.joined_at)
+                        (
+                            format!("{} (You): {}", p.name, p_id),
+                            p.joined_at,
+                            p.is_ready,
+                        )
                     } else {
-                        (format!("{}: {}", p.name, p_id), p.joined_at)
+                        (format!("{}: {}", p.name, p_id), p.joined_at, p.is_ready)
                     }
                 })
                 .collect();
-            // TODO add joined_at to playerDto and sort by it
-            players_info
-                .sort_by(|(_, p1_joined_at), (_, p2_joined_at)| p1_joined_at.cmp(p2_joined_at));
+            players_info.sort_by(|(_, p1_joined_at, _), (_, p2_joined_at, _)| {
+                p1_joined_at.cmp(p2_joined_at)
+            });
             let players: Vec<_> = players_info
                 .into_iter()
-                .map(|(players, _)| players)
+                .map(|(players, _, is_ready)| (players, is_ready))
                 .collect();
             list.extend(players);
 

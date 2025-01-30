@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Margin, Position, Rect},
-    style::{Color, Style, Styled, Stylize},
-    text::{Line, Span, Text},
+    layout::{Constraint, Direction, Flex, Layout, Margin, Position, Rect},
+    style::{Color, Style, Stylize},
+    text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
@@ -89,11 +89,34 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
 }
 
 /// Renders a list of players
-pub fn render_player_list(frame: &mut Frame, items: &[String], _selected_index: usize, rect: Rect) {
+pub fn render_player_list(
+    frame: &mut Frame,
+    items: &Vec<(String, bool)>,
+    _selected_index: usize,
+    rect: Rect,
+) {
     let vertical_text_spaces = evenly_distanced_rects(rect, 4);
 
-    for (text, area) in items.iter().zip(vertical_text_spaces.iter()) {
-        let text = Line::from(text.as_str());
+    for ((text, is_ready), area) in items.iter().zip(vertical_text_spaces.iter()) {
+        // let [area1, area2] = Layout::default()
+        //     .direction(Direction::Horizontal)
+        //     .constraints(vec![
+        //         Constraint::Percentage(80),
+        //         Constraint::Percentage(20),
+        //     ])
+        //     .split(*area);
+
+        let ready_symbol = if *is_ready { "✓" } else { "X" };
+        let ready_style = if *is_ready {
+            Style::default().fg(Color::Green)
+        } else {
+            Style::default().fg(Color::Red)
+        };
+        let text = Line::from(vec![
+            Span::raw(text),
+            Span::raw("     "),
+            Span::styled(ready_symbol, ready_style),
+        ]);
 
         render_text_in_center_of_rect(frame, Paragraph::new(text), *area);
     }
