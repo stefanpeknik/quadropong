@@ -4,6 +4,7 @@ use super::traits::{HasConfig, Render, State, Update};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
+use log::info;
 use ratatui::Frame;
 
 pub struct Quit {
@@ -30,6 +31,7 @@ impl Update for Quit {
         &mut self,
         _key_code: Option<KeyCode>,
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+        info!("Quitting the game");
         Ok(None)
     }
 }

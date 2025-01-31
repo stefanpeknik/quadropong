@@ -2,7 +2,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use log::info;
+use log::{debug, error, info};
 use quadropong::{
     common::{
         game_loop::process_input,
@@ -14,15 +14,33 @@ use quadropong::{
 use std::{collections::VecDeque, net::UdpSocket, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
 
+fn setup_logger() -> Result<(), fern::InitError> {
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{} [{}] {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Debug) // Set global log level
+        .chain(fern::log_file("output.log")?) // Log to file
+        .apply()?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
+    let _ = setup_logger(); // Ignore logger failure
+
     // Create a shared GameRooms instance
     let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
 
     let port = 3000;
     let addr = format!("0.0.0.0:{}", port);
 
-    let socket = UdpSocket::bind("0.0.0.0:34254").unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:34254").expect("Failed to bind to UDP socket");
     let _ = socket.set_nonblocking(true);
     let socket = Arc::new(socket);
 
@@ -47,13 +65,13 @@ async fn main() {
                         message_queue_recv.lock().await.push_back(input);
                     }
                     Err(e) => {
-                        println!("Error deserializing input from {}: {}", addr, e);
+                        error!("Failed to deserialize UDP packet: {}", e);
                     }
                 },
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     tokio::task::yield_now().await;
                 }
-                Err(e) => eprintln!("Error receiving UDP packet: {}", e),
+                Err(e) => error!("Failed to receive UDP packet: {}", e),
             }
         }
     });
@@ -97,13 +115,16 @@ async fn main() {
                         for player in game.players.values() {
                             if let Some(addr) = player.addr {
                                 if let Err(e) = socket.send_to(&serialized, addr) {
-                                    eprintln!("Failed to send game state to {}: {}", addr, e);
+                                    error!(
+                                        "Failed to send game state to player {} on {}: {}",
+                                        player.id, addr, e
+                                    );
                                 }
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("Failed to serialize game state: {}", e);
+                        error!("Failed to serialize game state: {}", e);
                     }
                 }
             }
@@ -126,7 +147,7 @@ async fn main() {
             axum::serve(listener, app).await.unwrap();
         }
         Err(e) => {
-            println!("Error: {}", e);
+            error!("Failed to bind to port {}: {}", port, e);
         }
     }
 }

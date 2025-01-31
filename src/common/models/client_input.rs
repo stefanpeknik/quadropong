@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Debug, Deserialize)]
 pub enum ClientInputType {
     JoinGame,
-    LeaveGame,
     PauseGame,
     ResumeGame,
     PlayerReady,

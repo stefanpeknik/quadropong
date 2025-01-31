@@ -10,6 +10,7 @@ use crate::client::config;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
+use log::info;
 use ratatui::style::Stylize;
 use ratatui::Frame;
 
@@ -77,16 +78,20 @@ impl Update for Menu {
                 KeyCode::Down => self.next(),
                 KeyCode::Enter => match self.options[self.selected] {
                     Options::Online => {
+                        info!("Moving from Menu to CreateOrJoinLobby");
                         return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
                     }
                     Options::Training => {
-                        return Ok(Some(Box::new(Training::new(self.config.clone()))))
+                        info!("Moving from Menu to Training");
+                        return Ok(Some(Box::new(Training::new(self.config.clone()))));
                     }
                     Options::Settings => {
+                        info!("Moving from Menu to Settings");
                         return Ok(Some(Box::new(Settings::new(self.config.clone()))));
                     }
                 },
                 KeyCode::Char('q') => {
+                    info!("Moving from Menu to Quit");
                     return Ok(Some(Box::new(Quit::new(self.config.clone()))));
                 }
                 _ => {}

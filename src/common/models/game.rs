@@ -1,4 +1,5 @@
 use chrono::{self, Utc};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::f32::consts::PI;
@@ -157,6 +158,7 @@ impl Game {
         }
 
         if let Some(id) = last_touched {
+            info!("game {}: player {} scored", self.id, id);
             let player = self.get_player_mut(&id);
             if let Some(player) = player {
                 player.increment_score();
@@ -172,12 +174,9 @@ impl Game {
             .values()
             .filter_map(|player| {
                 if let Some(last_ping_timestamp) = player.ping_timestamp {
-                    let elapsed = current_time
-                        .signed_duration_since(last_ping_timestamp)
-                        .to_std()
-                        .unwrap_or(Duration::from_secs(0));
+                    let elapsed = current_time.signed_duration_since(last_ping_timestamp);
 
-                    if elapsed.as_millis() as u64 > PING_TIMEOUT {
+                    if elapsed.num_milliseconds() as u64 > PING_TIMEOUT {
                         Some(player.id)
                     } else {
                         None
@@ -189,7 +188,7 @@ impl Game {
             .collect();
 
         for player_id in players_to_remove {
-            println!("player {} timed out", player_id);
+            info!("game {}: player {} timed out", self.id, player_id);
             self.remove_player(player_id);
         }
     }
@@ -262,6 +261,7 @@ impl Game {
                     .any(|p| p.score >= MAX_SCORE)
                 {
                     self.set_game_state(GameState::Finished);
+                    info!("game {}: finished", self.id);
                     return;
                 }
             }

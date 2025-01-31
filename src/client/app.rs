@@ -1,4 +1,14 @@
-use crossterm::event::{poll, KeyEvent};
+use crossterm::event::{EventStream, KeyEvent};
+use futures_util::TryStreamExt;
+use ratatui::{
+    backend::CrosstermBackend,
+    crossterm::{
+        event::{DisableMouseCapture, EnableMouseCapture, Event},
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    },
+    Terminal,
+};
 use std::{
     io::{self, Stderr},
     sync::{atomic::AtomicBool, Arc},
@@ -6,16 +16,7 @@ use std::{
     time::Duration,
 };
 use tokio::{self, sync::Mutex, task, time::Instant};
-
-use ratatui::{
-    backend::CrosstermBackend,
-    crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event},
-        execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    },
-    Terminal,
-};
+use tokio_util::sync::CancellationToken;
 
 use super::{
     config::Config,
@@ -48,6 +49,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result
 pub struct App {
     current_state: Arc<Mutex<Box<dyn State>>>,
     settings: Arc<Mutex<Config>>,
+    cancellation_token: CancellationToken,
 }
 
 impl App {
@@ -55,6 +57,7 @@ impl App {
         Self {
             current_state: Arc::new(Mutex::new(Box::new(Menu::new(0, settings.clone())))),
             settings: Arc::new(Mutex::new(settings)),
+            cancellation_token: CancellationToken::new(),
         }
     }
 
@@ -64,59 +67,61 @@ impl App {
 
         // Clone the shared state and the running flag for the task that updates the state
         let update_state = Arc::clone(&self.current_state);
-        let update_running = Arc::clone(&running);
+        let cancellation_token_clone = self.cancellation_token.clone();
         let update_settings = Arc::clone(&self.settings);
         let update_handle = task::spawn(async move {
+            let mut reader = EventStream::new();
             let mut last_key_event_time = Instant::now();
             let key_event_interval = Duration::from_millis(10);
             let mut last_key_event: Option<KeyEvent> = None;
 
-            // Update loop
-            while update_running.load(std::sync::atomic::Ordering::Relaxed) {
-                // Poll for user input
-                let input = if poll(Duration::from_millis(5))? {
-                    let now = Instant::now();
-                    if let Event::Key(key_event) = event::read()? {
-                        // Reduction for continuous key events
-                        if Some(key_event) != last_key_event
-                            || now.duration_since(last_key_event_time) >= key_event_interval
-                        {
-                            // Update the last key event time and the last key event
-                            last_key_event_time = now;
-                            last_key_event = Some(key_event);
-                            Some(key_event.code) // Capture the pressed key
-                        } else {
-                            None
-                        }
-                    } else {
-                        None // No input captured
-                    }
-                } else {
-                    None // No input captured
-                };
+            loop {
+                let mut input = None;
 
+                // Use select! to wait for either cancellation or input/timeout
+                tokio::select! {
+                    // Check for cancellation first
+                    biased;
+                    _ = cancellation_token_clone.cancelled() => break,
+
+                    // Process incoming events
+                    maybe_event = reader.try_next() => {
+                        match maybe_event {
+                            Ok(Some(Event::Key(key_event))) => {
+                                let now = Instant::now();
+                                let time_since_last = now.duration_since(last_key_event_time);
+
+                                if Some(key_event) != last_key_event || time_since_last >= key_event_interval {
+                                    last_key_event_time = now;
+                                    last_key_event = Some(key_event);
+                                    input = Some(key_event.code);
+                                }
+                            }
+                            Err(e) => return Err(e.into()),
+                            _ => {}
+                        }
+                    }
+
+                    // Regular state updates (5ms timeout matches original poll interval)
+                    _ = tokio::time::sleep(Duration::from_millis(5)) => {}
+                }
+
+                // Process state update with or without input
                 let mut current_state = update_state.lock().await;
-                // Update the state
                 match current_state.update(input).await {
                     Ok(Some(new_state)) => {
                         if new_state.as_any().downcast_ref::<Quit>().is_some() {
-                            // We got a Quit state, stop the tasks
-                            update_running.store(false, std::sync::atomic::Ordering::Relaxed);
+                            cancellation_token_clone.cancel();
+                            break;
                         } else {
-                            {
-                                let mut settings = update_settings.lock().await;
-                                *settings = current_state.config().clone();
-                            }
-                            // Move to the new state
+                            // Update settings before changing state
+                            let mut settings = update_settings.lock().await;
+                            *settings = current_state.config().clone();
                             *current_state = new_state;
                         }
                     }
-                    Ok(None) => {
-                        // Do nothing as the state is unchanged
-                    }
-                    Err(e) => {
-                        return Err(e);
-                    }
+                    Ok(None) => {}
+                    Err(e) => return Err(e),
                 }
             }
 
