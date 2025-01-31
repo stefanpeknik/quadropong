@@ -19,6 +19,7 @@ const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
 const GAME_SIZE: f32 = 10.0; // Since it's a square
 const MAX_PLAYERS: usize = 4;
 const PING_TIMEOUT: u64 = 2000; // 2 seconds
+const MAX_SCORE: u32 = 10;
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -253,6 +254,16 @@ impl Game {
                 || ball.position.y + ball.radius > 10.0
             {
                 self.goal_action();
+
+                if self
+                    .players
+                    .values()
+                    .into_iter()
+                    .any(|p| p.score >= MAX_SCORE)
+                {
+                    self.set_game_state(GameState::Finished);
+                    return;
+                }
             }
         }
 
