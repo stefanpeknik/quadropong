@@ -11,6 +11,7 @@ use super::utils::render::{
 use super::utils::widget::WidgetTrait;
 
 use crossterm::event::KeyCode;
+use log::{error, info};
 use ratatui::layout::{Constraint, Layout, Position};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
@@ -86,6 +87,7 @@ impl Update for CreateOrJoinLobby {
                 KeyCode::Up => self.previous(),
                 KeyCode::Down => self.next(),
                 KeyCode::Esc => {
+                    info!("Moving from CreateOrJoinLobby to Menu");
                     return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
 
@@ -103,6 +105,7 @@ impl Update for CreateOrJoinLobby {
                         {
                             // We successfully joined the game
                             Ok(our_player) => {
+                                info!("Moving from CreateOrJoinLobby to Lobby via create, game id: {:?}, our player id: {:?}", game.id, our_player.id);
                                 return Ok(Some(Box::new(Lobby::new(
                                     game,
                                     our_player.id,
@@ -135,6 +138,7 @@ impl Update for CreateOrJoinLobby {
                                         .await
                                     {
                                         Ok(our_player) => {
+                                            info!("Moving from CreateOrJoinLobby to Lobby via join, game id: {:?}, our player id: {:?}", game.id, our_player.id);
                                             return Ok(Some(Box::new(Lobby::new(
                                                 game,
                                                 our_player.id,
@@ -142,15 +146,18 @@ impl Update for CreateOrJoinLobby {
                                             ))));
                                         }
                                         Err(e) => {
+                                            info!("Error joining game: {}", e);
                                             self.error_message = Some(e.to_string());
                                         }
                                     },
                                     Err(e) => {
+                                        error!("Error getting game: {}", e);
                                         self.error_message = Some(e.to_string());
                                     }
                                 }
                             }
                             Err(e) => {
+                                error!("Invalid UUID when joining game: {}", e);
                                 self.error_message = Some(format!("Invalid UUID: {}", e));
                             }
                         };

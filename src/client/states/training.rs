@@ -71,6 +71,7 @@ impl Update for Training {
                     _ => {}
                 },
                 KeyCode::Esc => {
+                    log::info!("Moving from Training to Menu");
                     return Ok(Some(Box::new(Menu::new(1, self.config.clone()))));
                 }
                 _ => {}

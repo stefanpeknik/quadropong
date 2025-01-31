@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
+use log::{debug, info};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -22,42 +23,57 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
         Uuid::parse_str(&input.player_id),
     ) {
         (Ok(game_id), Ok(player_id)) => (game_id, player_id),
-        _ => return,
+        _ => {
+            info!("Invalid UUIDs of game_id or player_id");
+            return;
+        }
     };
+
+    info!(
+        "Processing input from player {} for game {}",
+        player_id, game_id
+    );
 
     let mut game_rooms = lobbies.lock().await;
 
     let game = match game_rooms.lobbies.get_mut(&game_id) {
         Some(game) => game,
-        None => return,
+        None => {
+            info!("Game {} not found", game_id);
+            return;
+        }
     };
 
     if !validate_game_state(&input.action, &game.state) {
+        debug!("Invalid action for game state");
         return;
     }
 
     let player = match game.get_player_mut(&player_id) {
         Some(player) => player,
-        None => return,
+        None => {
+            info!("Player {} not found", player_id);
+            return;
+        }
     };
 
     match input.action {
         ClientInputType::JoinGame => {
             player.addr = Some(addr);
             player.ping_timestamp = Some(chrono::Utc::now());
-            println!("game {}: new player joined", game_id);
+            info!("game {}: {} ({}) joined", player.name, game_id, player_id);
         }
         ClientInputType::PlayerReady => {
             player.is_ready = !player.is_ready;
 
             if game.start_game().is_ok() {
-                println!("game {}: started", game_id);
+                info!("game {}: started", game_id);
                 game.ball = Some(Ball::new());
             }
         }
         ClientInputType::PauseGame => {
             if game.pause_game().is_ok() {
-                println!("game {}: paused", game_id);
+                info!("game {}: paused", game_id);
             }
         }
         ClientInputType::MovePaddle(direction) => {
@@ -71,14 +87,18 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
             );
         }
         ClientInputType::Disconnect => {
-            println!("game {}: player {} disconnected", game_id, player_id);
+            info!(
+                "game {}: {} ({}) disconnected",
+                player.name, game_id, player_id
+            );
             game.remove_player(player_id);
         }
         ClientInputType::Ping => {
+            debug!("Pong from player {}", player_id);
             player.ping_timestamp = Some(chrono::Utc::now());
         }
         _ => {
-            println!("Invalid action");
+            info!("Unhandled action: {:?}", input.action);
         }
     }
 }

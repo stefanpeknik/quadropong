@@ -12,6 +12,7 @@ use super::utils::render::{render_outer_rectangle, render_player_list};
 
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
+use log::{debug, error, info};
 use ratatui::layout::{Constraint, Layout, Margin};
 use ratatui::style::Stylize;
 use ratatui::text::Line;
@@ -38,7 +39,7 @@ pub struct Lobby {
     selected: usize,
     game: Arc<Mutex<GameDto>>,
     our_player_id: Uuid,
-    cancelation_token: CancellationToken,
+    cancellation_token: CancellationToken,
     _receive_update_handle: JoinHandle<()>,
     _ping_handle: JoinHandle<()>,
     udp_client: Arc<UdpClient>,
@@ -50,12 +51,12 @@ impl Lobby {
         let udp_client =
             Arc::new(UdpClient::new(&config.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
 
-        let cancelation_token = CancellationToken::new();
+        let cancellation_token = CancellationToken::new();
         let game_dto = Arc::new(Mutex::new(GameDto::from(game)));
 
         // Start a task to receive updates
         let udp_client_clone = Arc::clone(&udp_client);
-        let cancelation_token_clone = cancelation_token.clone();
+        let cancellation_token_clone = cancellation_token.clone();
         let game_clone = Arc::clone(&game_dto);
         let receive_update_handle = tokio::spawn(async move {
             // send introduction message
@@ -76,16 +77,19 @@ impl Lobby {
             loop {
                 tokio::select! {
                     // Exit loop on cancellation
-                    _ = cancelation_token_clone.cancelled() => break,
+                    _ = cancellation_token_clone.cancelled() => break,
                     // Process incoming game updates
                     result = udp_client_clone.recv_updated_game() => {
                         match result {
                             Ok(updated_game) => {
                                 if let Ok(mut current_game) = game_clone.lock() {
                                     *current_game = updated_game;
+                                    debug!("Received updated game");
+                                } else {
+                                    error!("Failed to lock game");
                                 }
                             }
-                            Err(e) => eprintln!("Receive error: {}", e),
+                            Err(e) => error!("Failed to receive updated game: {}", e),
                         }
                     }
                 }
@@ -94,25 +98,28 @@ impl Lobby {
 
         // Start a task to send ping messages
         let udp_client_clone = Arc::clone(&udp_client);
-        let cancelation_token_clone = cancelation_token.clone();
+        let cancellation_token_clone = cancellation_token.clone();
         let game_clone = Arc::clone(&game_dto);
         let ping_handle = tokio::spawn(async move {
             let ping_interval = std::time::Duration::from_secs(1);
             loop {
                 tokio::time::sleep(ping_interval).await;
-                let client_input = ClientInput::new(
-                    game_clone
-                        .lock()
-                        .expect("Failed to lock game") // TODO: Handle this error
-                        .id
-                        .to_string(),
-                    our_player_id.to_string(),
-                    ClientInputType::Ping,
-                );
+                let client_input = if let Ok(g) = game_clone.lock() {
+                    ClientInput::new(
+                        g.id.to_string(),
+                        our_player_id.to_string(),
+                        ClientInputType::Ping,
+                    )
+                } else {
+                    error!("Failed to lock game");
+                    continue;
+                };
 
                 tokio::select! {
-                    _ = cancelation_token_clone.cancelled() => break,
-                    _ = udp_client_clone.send_client_input(client_input) => {}
+                    _ = cancellation_token_clone.cancelled() => break,
+                    _ = udp_client_clone.send_client_input(client_input) => {
+                        debug!("Sent ping message");
+                    }
                 }
             }
         });
@@ -123,7 +130,7 @@ impl Lobby {
             game: game_dto,
             our_player_id,
             udp_client,
-            cancelation_token,
+            cancellation_token,
             _receive_update_handle: receive_update_handle,
             _ping_handle: ping_handle,
             config,
@@ -160,6 +167,7 @@ impl Update for Lobby {
         // if game is started
         if let Ok(game) = self.game.lock() {
             if game.state == GameState::Active {
+                info!("Moving from Lobby to GameBoard as game is started");
                 return Ok(Some(Box::new(GameBoard::new(
                     game.clone(),
                     self.our_player_id,
@@ -167,6 +175,8 @@ impl Update for Lobby {
                     self.config.clone(),
                 ))));
             }
+        } else {
+            error!("Failed to lock game");
         }
 
         if let Some(key_code) = key_code {
@@ -178,8 +188,14 @@ impl Update for Lobby {
                             if let Ok(_clipboard_content) = clipboard.set_text(game.id.to_string())
                             {
                                 // TODO
+                            } else {
+                                error!("Failed to set clipboard content");
                             }
+                        } else {
+                            error!("Failed to lock game");
                         }
+                    } else {
+                        error!("Failed to create clipboard");
                     }
                 }
                 KeyCode::Up => self.previous(),
@@ -201,9 +217,11 @@ impl Update for Lobby {
                             .send_client_input(client_input)
                             .await
                             .expect("Failed to send player ready message"); // TODO: Handle this error
+                        info!("Toggle player ready");
                     }
                 },
                 KeyCode::Esc => {
+                    info!("Moving from Lobby to CreateOrJoinLobby");
                     return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
                 }
                 _ => {}
@@ -270,6 +288,8 @@ impl Render for Lobby {
                 self.selected,
                 outer_rect.inner(Margin::new(5, 5)),
             );
+        } else {
+            error!("Failed to lock game");
         }
     }
 }
@@ -277,6 +297,6 @@ impl Render for Lobby {
 impl Drop for Lobby {
     fn drop(&mut self) {
         // Signal the task to stop
-        self.cancelation_token.cancel();
+        self.cancellation_token.cancel();
     }
 }

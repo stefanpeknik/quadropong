@@ -10,8 +10,7 @@ pub struct UdpClient {
 impl UdpClient {
     pub fn new(server_addr: &str) -> Result<Self, UdpError> {
         let socket = std::net::UdpSocket::bind("0.0.0.0:0")?;
-        // socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-        // socket.set_write_timeout(Some(Duration::from_secs(5)))?;
+        socket.set_nonblocking(true)?;
         Ok(Self {
             server_addr: server_addr.to_string(),
             socket: tokio::net::UdpSocket::from_std(socket)?,

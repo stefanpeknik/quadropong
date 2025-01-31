@@ -11,6 +11,7 @@ use super::utils::widget::{Widget, WidgetTrait};
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
+use log::{error, info};
 use ratatui::layout::Margin;
 use ratatui::style::Stylize;
 use ratatui::Frame;
@@ -141,12 +142,16 @@ impl Update for Settings {
                     if let Ok(mut settings) = self.config.lock() {
                         // save selected option to settings
                         settings.save_option(&self.options[self.selected]);
+                    } else {
+                        error!("Failed to lock settings");
                     }
                 }
                 KeyCode::Esc => {
                     if let Ok(mut settings) = self.config.lock() {
                         // save to config file before exiting screen
                         let _ = settings.save_config();
+                        info!("Config saved");
+                        info!("Moving from Settings to Menu");
                         return Ok(Some(Box::new(Menu::new(2, settings.clone()))));
                     }
                 }

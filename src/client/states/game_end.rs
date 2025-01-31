@@ -44,6 +44,7 @@ impl Update for GameEnd {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Enter => {
+                    log::info!("Moving from GameEnd to Menu");
                     return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
                 _ => {}
