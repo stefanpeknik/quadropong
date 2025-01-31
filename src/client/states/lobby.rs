@@ -84,7 +84,6 @@ impl Lobby {
                             Ok(updated_game) => {
                                 if let Ok(mut current_game) = game_clone.lock() {
                                     *current_game = updated_game;
-                                    debug!("Received updated game");
                                 } else {
                                     error!("Failed to lock game");
                                 }

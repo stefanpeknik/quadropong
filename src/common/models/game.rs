@@ -163,6 +163,7 @@ impl Game {
             if let Some(player) = player {
                 player.increment_score();
             }
+            info!("game {}: player {} scored", self.id, id);
         }
     }
 
