@@ -11,7 +11,7 @@ use ratatui::{
 };
 use std::{
     io::{self, Stderr},
-    sync::{atomic::AtomicBool, Arc},
+    sync::Arc,
     thread::sleep,
     time::Duration,
 };
@@ -62,9 +62,6 @@ impl App {
     }
 
     pub async fn run(&mut self) -> Result<(), io::Error> {
-        // Shared flag to stop the tasks
-        let running = Arc::new(AtomicBool::new(true));
-
         // Clone the shared state and the running flag for the task that updates the state
         let update_state = Arc::clone(&self.current_state);
         let cancellation_token_clone = self.cancellation_token.clone();
@@ -131,7 +128,12 @@ impl App {
         let mut terminal = setup_terminal()?;
 
         // Main render loop
-        while running.load(std::sync::atomic::Ordering::Relaxed) {
+        loop {
+            // Check for cancellation
+            if self.cancellation_token.is_cancelled() {
+                break;
+            }
+
             // Lock the state and render (release the lock as soon as possible)
             {
                 let current_state = self.current_state.lock().await;

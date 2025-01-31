@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use log::{debug, info};
+use log::{debug, error, info};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -39,7 +39,7 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
     let game = match game_rooms.lobbies.get_mut(&game_id) {
         Some(game) => game,
         None => {
-            info!("Game {} not found", game_id);
+            error!("Game {} not found", game_id);
             return;
         }
     };
@@ -52,7 +52,7 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
     let player = match game.get_player_mut(&player_id) {
         Some(player) => player,
         None => {
-            info!("Player {} not found", player_id);
+            error!("Player {} not found", player_id);
             return;
         }
     };
@@ -65,6 +65,14 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
         }
         ClientInputType::PlayerReady => {
             player.is_ready = !player.is_ready;
+            if player.is_ready {
+                info!("game {}: {} ({}) is ready", player.name, game_id, player_id);
+            } else {
+                info!(
+                    "game {}: {} ({}) is not ready",
+                    player.name, game_id, player_id
+                );
+            }
 
             if game.start_game().is_ok() {
                 info!("game {}: started", game_id);
@@ -98,7 +106,7 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
             player.ping_timestamp = Some(chrono::Utc::now());
         }
         _ => {
-            info!("Unhandled action: {:?}", input.action);
+            error!("Unhandled action: {:?}", input.action);
         }
     }
 }

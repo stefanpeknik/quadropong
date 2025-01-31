@@ -59,7 +59,6 @@ impl GameBoard {
                             Ok(updated_game) => {
                                 if let Ok(mut current_game) = game_clone.lock() {
                                     *current_game = updated_game;
-                                    debug!("Game updated");
                                 } else {
                                     error!("Failed to lock game");
                                 }
