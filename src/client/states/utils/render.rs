@@ -188,7 +188,7 @@ pub fn render_settings(
 
         frame.render_widget(
             Paragraph::new(Line::from(vec![
-                Span::raw(get_widget_text(&widget)),
+                Span::raw(get_widget_text(widget)),
                 Span::raw(" "),
                 Span::styled(color_check, style),
             ])),

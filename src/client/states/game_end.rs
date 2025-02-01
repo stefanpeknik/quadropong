@@ -2,8 +2,8 @@ use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Constraint, Flex, Layout, Margin, Rect},
-    style::Stylize,
-    text::Line,
+    style::{Style, Stylize},
+    text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
 };
@@ -125,13 +125,24 @@ impl Render for GameEnd {
             let podium_block = Block::bordered();
             frame.render_widget(podium_block, podium_rect);
 
+            let style = if self.our_player_id == player.id {
+                Style::default().fg(self.config.player_color)
+            } else {
+                Style::default()
+            };
+
             // Draw the player name and crown (if 1st place)
             let name_paragraph = Paragraph::new(if i == 0 {
                 // For 1st place, render the crown on top of the name
-                vec![Line::from("👑"), Line::from(player.name.clone())]
+                vec![
+                    Line::from("👑"),
+                    Line::from(Span::styled(player.name.clone(), style)),
+                ]
             } else {
-                // For 2nd and 3rd, just render the name
-                vec![Line::from("\n"), Line::from(player.name.clone())]
+                vec![
+                    Line::from("\n"),
+                    Line::from(Span::styled(player.name.clone(), style)),
+                ]
             })
             .centered();
 
@@ -148,8 +159,7 @@ impl Render for GameEnd {
                     2 => "3rd",
                     _ => "",
                 }
-                .to_string()
-                .yellow(),
+                .to_string(),
             ));
             frame.render_widget(
                 number_paragraph,

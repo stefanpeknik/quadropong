@@ -110,9 +110,9 @@ impl Render for Menu {
                 " Quit".into(),
                 " <Q> ".light_blue().bold(),
                 "| Up".into(),
-                " <\u{2191}> ".light_blue().into(),
+                " <\u{2191}> ".light_blue(),
                 "| Down".into(),
-                " <\u{2193}> ".light_blue().into(),
+                " <\u{2193}> ".light_blue(),
             ],
         );
 

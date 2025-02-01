@@ -16,7 +16,7 @@ impl GameRooms {
 
     pub fn create_game(&mut self) -> Uuid {
         let game = Game::new();
-        let game_id = game.id.clone();
+        let game_id = game.id;
         self.lobbies.insert(game_id, game);
 
         game_id

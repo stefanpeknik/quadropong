@@ -201,7 +201,7 @@ impl Render for Settings {
                     .map(|x| x.to_string())
                     .collect::<Vec<String>>(),
                 &self.get_widget_all(),
-                &self.get_widget_active(),
+                self.get_widget_active(),
                 selected_index,
                 inner_rect,
             );

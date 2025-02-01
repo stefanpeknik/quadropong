@@ -273,7 +273,7 @@ impl Render for Lobby {
                 Line::from(vec![" Copy ".into(), "<TAB> ".green().bold()]).right_aligned(),
             );
             let inner_lobby_id_area = lobby_id_block.inner(lobby_id_area);
-            let lobby_id_paragraph = Paragraph::new(format!(" Game ID - {}", game.id.to_string()));
+            let lobby_id_paragraph = Paragraph::new(format!(" Game ID - {}", game.id));
             frame.render_widget(lobby_id_paragraph, inner_lobby_id_area);
             frame.render_widget(lobby_id_block, lobby_id_area);
 

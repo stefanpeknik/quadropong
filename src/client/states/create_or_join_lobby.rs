@@ -6,7 +6,7 @@ use super::menu::Menu;
 use super::traits::{HasConfig, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{
-    evenly_distanced_rects, into_title, render_inner_rectangle, render_outer_rectangle,
+    into_title, render_inner_rectangle, render_outer_rectangle,
 };
 use super::utils::widget::WidgetTrait;
 
