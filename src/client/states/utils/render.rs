@@ -89,12 +89,7 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
 }
 
 /// Renders a list of players
-pub fn render_player_list(
-    frame: &mut Frame,
-    items: &Vec<(String, bool)>,
-    _selected_index: usize,
-    rect: Rect,
-) {
+pub fn render_player_list(frame: &mut Frame, items: &Vec<(String, bool)>, rect: Rect) {
     let vertical_text_spaces = evenly_distanced_rects(rect, 4);
 
     for ((text, is_ready), area) in items.iter().zip(vertical_text_spaces.iter()) {
