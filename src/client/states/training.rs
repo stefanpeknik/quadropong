@@ -61,15 +61,13 @@ impl Training {
                         if let Ok(mut g) = game_clone.lock() {
                             g.game_tick();
                             // TODO ai should be eventually handled in the game tick logic
+                            let ball = g.ball.clone();
                             for player in g.players.values_mut() {
                                 if player.is_ai {
-                                        let direction = if rand::random() {
-                                            Direction::Positive
-                                        } else {
-                                            Direction::Negative
-                                        };
-                                        player.move_paddle(direction);
+                                    if let Some(ref ball) = ball {
+                                        player.ai(ball.clone());
                                     }
+                                }
                             }
                         }
                     }

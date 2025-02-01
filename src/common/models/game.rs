@@ -20,7 +20,7 @@ const GAME_SIZE: f32 = 10.0;
 const MAX_PLAYERS: usize = 4;
 const PING_TIMEOUT: u64 = 2000;
 const MAX_SCORE: u32 = 10;
-const GOAL_TIMEOUT: u64 = 500;
+const GOAL_TIMEOUT: u64 = 750;
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -217,6 +217,12 @@ impl Game {
 
         if let Some(ball) = &mut self.ball {
             ball.update_position();
+
+            self.players.values_mut().for_each(|player| {
+                if player.is_ai {
+                    player.ai(ball.clone());
+                }
+            });
 
             const ALL_POSITIONS: &[PlayerPosition] = &[
                 PlayerPosition::Top,

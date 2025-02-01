@@ -1,9 +1,10 @@
 use std::net::SocketAddr;
 
+use ratatui::prelude::Backend;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::Direction;
+use super::{Ball, Direction};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum PlayerPosition {
@@ -52,13 +53,105 @@ impl Player {
     }
 
     pub fn move_paddle(&mut self, direction: Direction) {
-        let delta = match direction {
+        let mut delta = match direction {
             Direction::Positive => self.paddle_delta,
             Direction::Negative => -self.paddle_delta,
         };
+
+        // artificially slow down the paddle movement for AI players
+        if self.is_ai {
+            delta *= 0.25;
+        }
+
         self.paddle_position = (self.paddle_position + delta).clamp(
             0.0 + (self.paddle_width / 2.0),
             10.0 - (self.paddle_width / 2.0),
         );
+    }
+
+    pub fn move_towards(&mut self, position: f32) {
+        let mut target_position = position;
+
+        if (position - self.paddle_position).abs() < self.paddle_width / 2.0 {
+            let offset = rand::random::<f32>() * (self.paddle_width / 2.0);
+            target_position = position + offset;
+            target_position = target_position.clamp(
+                self.paddle_position - self.paddle_width / 2.0,
+                self.paddle_position + self.paddle_width / 2.0,
+            );
+        }
+
+        if self.paddle_position > target_position {
+            self.move_paddle(Direction::Negative);
+        } else {
+            self.move_paddle(Direction::Positive);
+        }
+    }
+
+    pub fn ai(&mut self, ball: Ball) {
+        let side_intersection: Option<f32> = match self.position {
+            Some(PlayerPosition::Top) => {
+                if ball.velocity.y >= 0.0 {
+                    None
+                } else {
+                    let time = (0.0 - ball.position.y) / ball.velocity.y;
+                    let x = ball.position.x + ball.velocity.x * time;
+                    if time >= 0.0 && (0.0..=10.0).contains(&x) {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            }
+            Some(PlayerPosition::Bottom) => {
+                if ball.velocity.y < 0.0 {
+                    None
+                } else {
+                    let time = (10.0 - ball.position.y) / ball.velocity.y;
+                    let x = ball.position.x + ball.velocity.x * time;
+                    if time >= 0.0 && (0.0..=10.0).contains(&x) {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }
+            }
+            Some(PlayerPosition::Left) => {
+                if ball.velocity.x >= 0.0 {
+                    None
+                } else {
+                    let time = (0.0 - ball.position.x) / ball.velocity.x;
+                    let y = ball.position.y + ball.velocity.y * time;
+                    if time >= 0.0 && (0.0..=10.0).contains(&y) {
+                        Some(y)
+                    } else {
+                        None
+                    }
+                }
+            }
+            Some(PlayerPosition::Right) => {
+                if ball.velocity.x < 0.0 {
+                    None
+                } else {
+                    let time = (10.0 - ball.position.x) / ball.velocity.x;
+                    let y = ball.position.y + ball.velocity.y * time;
+                    if time >= 0.0 && (0.0..=10.0).contains(&y) {
+                        Some(y)
+                    } else {
+                        None
+                    }
+                }
+            }
+            None => None,
+        };
+
+        match side_intersection {
+            Some(x) => {
+                self.move_towards(x);
+            }
+            None => {
+                self.move_towards(5.0);
+            }
+        }
     }
 }
