@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use ratatui::prelude::Backend;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -60,7 +60,7 @@ impl Player {
 
         // artificially slow down the paddle movement for AI players
         if self.is_ai {
-            delta *= 0.25;
+            delta *= 0.2;
         }
 
         self.paddle_position = (self.paddle_position + delta).clamp(
@@ -74,7 +74,10 @@ impl Player {
 
         if (position - self.paddle_position).abs() < self.paddle_width / 2.0 {
             let offset = rand::random::<f32>() * (self.paddle_width / 2.0);
-            target_position = position + offset;
+            let mut rng = rand::rng();
+            let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
+
+            target_position = position + (offset * sign);
             target_position = target_position.clamp(
                 self.paddle_position - self.paddle_width / 2.0,
                 self.paddle_position + self.paddle_width / 2.0,
@@ -88,7 +91,11 @@ impl Player {
         }
     }
 
-    pub fn ai(&mut self, ball: Ball) {
+    pub fn calculate_ball_position(&self, ball: Ball, rec_step: i8) -> Option<f32> {
+        if rec_step > 2 {
+            return None;
+        }
+
         let side_intersection: Option<f32> = match self.position {
             Some(PlayerPosition::Top) => {
                 if ball.velocity.y >= 0.0 {
@@ -112,7 +119,22 @@ impl Player {
                     if time >= 0.0 && (0.0..=10.0).contains(&x) {
                         Some(x)
                     } else {
-                        None
+                        let time_to_wall = if ball.velocity.x < 0.0 {
+                            (0.0 + ball.radius - ball.position.x) / ball.velocity.x
+                        } else {
+                            (10.0 - ball.radius - ball.position.x) / ball.velocity.x
+                        };
+
+                        let mut new_ball = ball.clone();
+                        new_ball.position.x = if ball.velocity.x < 0.0 {
+                            ball.radius
+                        } else {
+                            10.0 - ball.radius
+                        };
+                        new_ball.position.y = ball.position.y + time_to_wall * ball.velocity.y;
+                        new_ball.velocity.x = -ball.velocity.x;
+
+                        self.calculate_ball_position(new_ball, rec_step + 1)
                     }
                 }
             }
@@ -144,6 +166,11 @@ impl Player {
             }
             None => None,
         };
+        side_intersection
+    }
+
+    pub fn ai(&mut self, ball: Ball) {
+        let side_intersection: Option<f32> = self.calculate_ball_position(ball, 1);
 
         match side_intersection {
             Some(x) => {

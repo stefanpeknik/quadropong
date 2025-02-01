@@ -12,10 +12,10 @@ use super::dto::GameDto;
 use super::player::PlayerPosition;
 use super::Player;
 
-const MAX_ANGLE: f32 = PI / 4.0; // Maximum reflection angle (45 degrees in radians)
+const MAX_ANGLE: f32 = PI / 3.0; // Maximum reflection angle (60 degrees in radians)
 const BALL_SPEED: f32 = 0.15; // Constant ball speed
-const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
-const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
+const PADDLE_PADDING: f32 = 0.25; // Padding around paddle to prevent collisions
+const SAFE_ZONE_MARGIN: f32 = 1.0; // Multiplier for padding to define safe zone
 const GAME_SIZE: f32 = 10.0;
 const MAX_PLAYERS: usize = 4;
 const PING_TIMEOUT: u64 = 2000;
