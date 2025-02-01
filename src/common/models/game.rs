@@ -89,7 +89,7 @@ impl Game {
 
     pub fn remove_player(&mut self, id: Uuid) {
         self.players.remove(&id);
-        if self.players.len() < 2 {
+        if self.players.values().filter(|player| !player.is_ai).count() < 1 {
             self.set_game_state(GameState::Finished);
         }
     }
