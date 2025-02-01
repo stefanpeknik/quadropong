@@ -67,11 +67,7 @@ impl Lobby {
         let receive_update_handle = tokio::spawn(async move {
             // send introduction message
             let client_input = ClientInput::new(
-                game_clone
-                    .lock()
-                    .expect("Failed to lock game") // TODO: Handle this error
-                    .id
-                    .to_string(),
+                game_id.to_string(),
                 our_player_id.to_string(),
                 ClientInputType::JoinGame,
             );
@@ -104,21 +100,15 @@ impl Lobby {
         // Start a task to send ping messages
         let udp_client_clone = Arc::clone(&udp_client);
         let cancellation_token_clone = cancellation_token.clone();
-        let game_clone = Arc::clone(&game_dto);
         let ping_handle = tokio::spawn(async move {
             let ping_interval = std::time::Duration::from_secs(1);
             loop {
                 tokio::time::sleep(ping_interval).await;
-                let client_input = if let Ok(g) = game_clone.lock() {
-                    ClientInput::new(
-                        g.id.to_string(),
-                        our_player_id.to_string(),
-                        ClientInputType::Ping,
-                    )
-                } else {
-                    error!("Failed to lock game");
-                    continue;
-                };
+                let client_input = ClientInput::new(
+                    game_id.to_string(),
+                    our_player_id.to_string(),
+                    ClientInputType::Ping,
+                );
 
                 tokio::select! {
                     _ = cancellation_token_clone.cancelled() => break,
@@ -191,15 +181,11 @@ impl Update for Lobby {
                 KeyCode::Tab => {
                     // copy game id to clipboard
                     if let Ok(mut clipboard) = Clipboard::new() {
-                        if let Ok(game) = self.game.lock() {
-                            if let Ok(_clipboard_content) = clipboard.set_text(game.id.to_string())
-                            {
-                                // TODO
-                            } else {
-                                error!("Failed to set clipboard content");
-                            }
+                        if let Ok(_clipboard_content) = clipboard.set_text(self.game_id.to_string())
+                        {
+                            // TODO
                         } else {
-                            error!("Failed to lock game");
+                            error!("Failed to set clipboard content");
                         }
                     } else {
                         error!("Failed to create clipboard");
@@ -212,11 +198,7 @@ impl Update for Lobby {
                     _ => {
                         // send player ready
                         let client_input = ClientInput::new(
-                            self.game
-                                .lock()
-                                .expect("Failed to lock game") // TODO: Handle this error
-                                .id
-                                .to_string(),
+                            self.game_id.to_string(),
                             self.our_player_id.to_string(),
                             ClientInputType::PlayerReady,
                         );
