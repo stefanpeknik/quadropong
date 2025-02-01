@@ -16,10 +16,11 @@ const MAX_ANGLE: f32 = PI / 4.0; // Maximum reflection angle (45 degrees in radi
 const BALL_SPEED: f32 = 0.15; // Constant ball speed
 const PADDLE_PADDING: f32 = 0.5; // Padding around paddle to prevent collisions
 const SAFE_ZONE_MARGIN: f32 = 1.5; // Multiplier for padding to define safe zone
-const GAME_SIZE: f32 = 10.0; // Since it's a square
+const GAME_SIZE: f32 = 10.0;
 const MAX_PLAYERS: usize = 4;
-const PING_TIMEOUT: u64 = 2000; // 2 seconds
+const PING_TIMEOUT: u64 = 2000;
 const MAX_SCORE: u32 = 10;
+const GOAL_TIMEOUT: u64 = 350;
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -37,6 +38,7 @@ pub struct Game {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
     pub ball: Option<Ball>,
+    pub last_goal_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl Game {
@@ -48,6 +50,7 @@ impl Game {
             created_at: chrono::Utc::now(),
             started_at: None,
             ball: Some(Ball::new()),
+            last_goal_at: None,
         }
     }
 
@@ -153,6 +156,7 @@ impl Game {
 
         if let Some(ref mut ball) = self.ball {
             last_touched = ball.last_touched_by;
+            self.last_goal_at = Some(Utc::now());
             ball.reset();
         }
 
@@ -162,7 +166,6 @@ impl Game {
             if let Some(player) = player {
                 player.increment_score();
             }
-            info!("game {}: player {} scored", self.id, id);
         }
     }
 
@@ -197,9 +200,16 @@ impl Game {
             return;
         }
 
+        // create an artificial pause after the goal was scored
+        if let Some(last_goal_at) = self.last_goal_at {
+            let elapsed_since_goal = Utc::now().signed_duration_since(last_goal_at);
+            if (elapsed_since_goal.num_milliseconds() as u64) < GOAL_TIMEOUT {
+                return;
+            }
+        }
+
         if let Some(ball) = &mut self.ball {
-            ball.position.x += ball.velocity.x;
-            ball.position.y += ball.velocity.y;
+            ball.update_position();
 
             const ALL_POSITIONS: &[PlayerPosition] = &[
                 PlayerPosition::Top,
@@ -207,44 +217,16 @@ impl Game {
                 PlayerPosition::Right,
                 PlayerPosition::Left,
             ];
+
             for empty_pos in ALL_POSITIONS.iter().filter(|pos| {
                 self.players
                     .values()
                     .all(|player| player.position != Some(**pos))
             }) {
-                match empty_pos {
-                    PlayerPosition::Top => {
-                        if ball.position.y - ball.radius < 0.0 {
-                            ball.position.y = 0.0 + ball.radius;
-                            ball.velocity.y *= -1.0;
-                        }
-                    }
-                    PlayerPosition::Bottom => {
-                        if ball.position.y + ball.radius > GAME_SIZE {
-                            ball.position.y = 10.0 - ball.radius;
-                            ball.velocity.y *= -1.0;
-                        }
-                    }
-                    PlayerPosition::Left => {
-                        if ball.position.x - ball.radius < 0.0 {
-                            ball.position.x = 0.0 + ball.radius;
-                            ball.velocity.x *= -1.0;
-                        }
-                    }
-                    PlayerPosition::Right => {
-                        if ball.position.x + ball.radius > GAME_SIZE {
-                            ball.position.x = 10.0 - ball.radius;
-                            ball.velocity.x *= -1.0;
-                        }
-                    }
-                }
+                ball.calculate_wall_reflection(*empty_pos);
             }
 
-            if ball.position.x - ball.radius < 0.0
-                || ball.position.x + ball.radius > 10.0
-                || ball.position.y - ball.radius < 0.0
-                || ball.position.y + ball.radius > 10.0
-            {
+            if ball.clone().is_goal() {
                 self.goal_action();
 
                 if self
