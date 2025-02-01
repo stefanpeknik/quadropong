@@ -34,7 +34,7 @@ pub async fn join_game(
 
     let player_positions = game.assign_position();
 
-    let mut player = Player::new(player_name);
+    let mut player = Player::new(player_name, false);
 
     if let Some(position) = player_positions {
         player.position = Some(position);
@@ -86,4 +86,38 @@ pub async fn get_game_by_id(
         .cloned()
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
+}
+
+pub async fn add_bot(
+    State(app_state): State<Arc<Mutex<GameRooms>>>,
+    Path(game_id): Path<String>,
+) -> Result<Json<Player>, StatusCode> {
+    let game_uuid = Uuid::parse_str(&game_id).map_err(|_e| StatusCode::BAD_REQUEST)?;
+
+    let mut game_rooms = app_state.lock().await;
+
+    let game = game_rooms
+        .lobbies
+        .get_mut(&game_uuid)
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    if (game.players.len() + 1) > 4 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let player_name = format!("bot_{}", game.players.len() + 1);
+
+    let mut player = Player::new(player_name, true);
+
+    let player_positions = game.assign_position();
+
+    if let Some(position) = player_positions {
+        player.position = Some(position);
+    }
+
+    let player_copy = player.clone();
+
+    game.add_player(player)
+        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)
+        .map(|_| Json(player_copy))
 }

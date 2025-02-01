@@ -9,7 +9,7 @@ use quadropong::{
         models::{ClientInput, ClientInputWithAddr},
         GameRooms,
     },
-    server::api::{create_game, get_game_by_id, get_games, join_game},
+    server::api::{add_bot, create_game, get_game_by_id, get_games, join_game},
 };
 use std::{collections::VecDeque, net::UdpSocket, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
@@ -137,6 +137,7 @@ async fn main() {
         .route("/game", get(get_games)) // get list of all games
         .route("/game", post(create_game)) // create a new game
         .route("/game/:id/join", post(join_game)) // join a game
+        .route("/game/:id/add_bot", post(add_bot)) // add a bot to a game
         .with_state(game_rooms);
 
     let listener = tokio::net::TcpListener::bind(addr).await;

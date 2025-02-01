@@ -28,7 +28,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, is_ai: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
@@ -40,25 +40,8 @@ impl Player {
             paddle_delta: 0.15,
             paddle_position: 5.0,
             paddle_width: 1.0,
-            is_ready: false,
-            is_ai: false,
-        }
-    }
-
-    pub fn new_ai() -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            name: "Robot".to_string(),
-            joined_at: chrono::Utc::now(),
-            ping_timestamp: None,
-            score: 0,
-            addr: None,
-            position: None,
-            paddle_delta: 0.15,
-            paddle_position: 5.0,
-            paddle_width: 1.0,
-            is_ready: false,
-            is_ai: true,
+            is_ready: is_ai, // AI players are always ready
+            is_ai: is_ai,
         }
     }
 

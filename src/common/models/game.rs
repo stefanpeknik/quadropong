@@ -3,7 +3,6 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::time::Duration;
 use uuid::Uuid;
 
 use crate::common::game_error::GameError;
@@ -174,17 +173,10 @@ impl Game {
             .players
             .values()
             .filter_map(|player| {
-                if let Some(last_ping_timestamp) = player.ping_timestamp {
-                    let elapsed = current_time.signed_duration_since(last_ping_timestamp);
-
-                    if elapsed.num_milliseconds() as u64 > PING_TIMEOUT {
-                        Some(player.id)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+                player.ping_timestamp.and_then(|timestamp| {
+                    let elapsed = current_time.signed_duration_since(timestamp);
+                    (elapsed.num_milliseconds() as u64 > PING_TIMEOUT).then_some(player.id)
+                })
             })
             .collect();
 
