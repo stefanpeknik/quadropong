@@ -10,9 +10,9 @@ use super::states::{
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
-    #[serde(skip)]
+    #[serde(default = "default_api_addr")]
     pub api_url: String,
-    #[serde(skip)]
+    #[serde(default = "default_socket_addr")]
     pub socket_addr: String,
     pub player_name: String,
     pub player_color: Color,
@@ -24,13 +24,21 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             player_name: "player".to_string(),
-            api_url: "http://localhost:3000".to_string(),
-            socket_addr: "localhost:34254".to_string(),
+            api_url: default_api_addr(),
+            socket_addr: default_socket_addr(),
             player_color: Color::Green,
             other_players_color: Color::White,
             fps: 60,
         }
     }
+}
+
+pub fn default_api_addr() -> String {
+    "http://127.0.0.1:3000".to_string()
+}
+
+pub fn default_socket_addr() -> String {
+    "127.0.0.1:34254".to_string()
 }
 
 impl Config {
