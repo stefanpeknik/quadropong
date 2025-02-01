@@ -41,7 +41,7 @@ impl Player {
             paddle_position: 5.0,
             paddle_width: 1.0,
             is_ready: is_ai, // AI players are always ready
-            is_ai: is_ai,
+            is_ai,
         }
     }
 

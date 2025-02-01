@@ -1,3 +1,4 @@
+use log::info;
 use reqwest::Client;
 use serde_json;
 use uuid::Uuid;
@@ -95,6 +96,38 @@ impl TcpClient {
             .post(&url)
             .header("Content-Type", "application/json")
             .body(payload_json)
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
+
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
+
+        // Read the response body and handle potential errors
+        let response_text = response
+            .text()
+            .await
+            .map_err(TcpError::FailedToReadResponse)?;
+
+        // Deserialize the response and handle potential errors
+        let player: Player = serde_json::from_str(&response_text)?;
+
+        Ok(player)
+    }
+
+    pub async fn add_bot(&self, game_id: Uuid) -> Result<Player, TcpError> {
+        let url = format!("{}/game/{}/add_bot", self.server_addr, game_id);
+        info!("Sending request to {}", url);
+
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .post(&url)
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;

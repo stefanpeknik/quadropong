@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::client::config;
+use crate::client::net::tcp::TcpClient;
 use crate::client::net::udp::UdpClient;
 use crate::common::models::{ClientInput, ClientInputType, GameDto, GameState};
 use crate::common::Game;
@@ -38,11 +39,13 @@ pub struct Lobby {
     options: Vec<Options>,
     selected: usize,
     game: Arc<Mutex<GameDto>>,
+    game_id: Uuid,
     our_player_id: Uuid,
     cancellation_token: CancellationToken,
     _receive_update_handle: JoinHandle<()>,
     _ping_handle: JoinHandle<()>,
     udp_client: Arc<UdpClient>,
+    tcp_client: Arc<TcpClient>,
     config: config::Config,
 }
 
@@ -51,7 +54,10 @@ impl Lobby {
         let udp_client =
             Arc::new(UdpClient::new(&config.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
 
+        let tcp_client = Arc::new(TcpClient::new(&config.api_url)); // TODO: same as above
+
         let cancellation_token = CancellationToken::new();
+        let game_id = game.id;
         let game_dto = Arc::new(Mutex::new(GameDto::from(game)));
 
         // Start a task to receive updates
@@ -127,8 +133,10 @@ impl Lobby {
             options: vec![Options::TODO],
             selected: 0,
             game: game_dto,
+            game_id,
             our_player_id,
             udp_client,
+            tcp_client,
             cancellation_token,
             _receive_update_handle: receive_update_handle,
             _ping_handle: ping_handle,
@@ -219,6 +227,10 @@ impl Update for Lobby {
                         info!("Toggle player ready");
                     }
                 },
+                KeyCode::Char('b') => match self.tcp_client.add_bot(self.game_id).await {
+                    Err(e) => info!("Add bot failed: {}", e),
+                    Ok(_) => info!("Add bot called"),
+                },
                 KeyCode::Esc => {
                     info!("Moving from Lobby to CreateOrJoinLobby");
                     return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
@@ -238,8 +250,10 @@ impl Render for Lobby {
             vec![
                 " Leave Game ".into(),
                 "<Esc> ".light_blue().bold(),
-                "| Start Game ".into(),
-                "<Space> ".light_blue().bold(),
+                "| Ready ".into(),
+                "<Enter> ".light_blue().bold(),
+                "| Add bot ".into(),
+                "<B> ".light_cyan().bold(),
             ],
         );
         let inner_rect = outer_rect.inner(Margin {
