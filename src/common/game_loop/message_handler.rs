@@ -85,14 +85,7 @@ pub async fn process_input(input: ClientInput, lobbies: Arc<Mutex<GameRooms>>, a
             }
         }
         ClientInputType::MovePaddle(direction) => {
-            let delta = match direction {
-                Direction::Positive => player.paddle_delta,
-                Direction::Negative => -player.paddle_delta,
-            };
-            player.paddle_position = (player.paddle_position + delta).clamp(
-                0.0 + (player.paddle_width / 2.0),
-                10.0 - (player.paddle_width / 2.0),
-            );
+            player.move_paddle(direction);
         }
         ClientInputType::Disconnect => {
             info!(

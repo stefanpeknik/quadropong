@@ -3,6 +3,8 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::Direction;
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum PlayerPosition {
     Top,
@@ -47,5 +49,16 @@ impl Player {
 
     pub fn increment_score(&mut self) {
         self.score += 1;
+    }
+
+    pub fn move_paddle(&mut self, direction: Direction) {
+        let delta = match direction {
+            Direction::Positive => self.paddle_delta,
+            Direction::Negative => -self.paddle_delta,
+        };
+        self.paddle_position = (self.paddle_position + delta).clamp(
+            0.0 + (self.paddle_width / 2.0),
+            10.0 - (self.paddle_width / 2.0),
+        );
     }
 }

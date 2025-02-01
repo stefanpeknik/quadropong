@@ -1,14 +1,15 @@
 use std::rc::Rc;
 
 use ratatui::{
-    layout::{Constraint, Direction, Flex, Layout, Margin, Position, Rect},
-    style::{Color, Style, Stylize},
+    layout::{Alignment, Constraint, Flex, Layout, Margin, Position, Rect},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
+use uuid::Uuid;
 
-use crate::common::models::{BallDto, PlayerDto, PlayerPosition};
+use crate::common::models::{BallDto, GameDto, PlayerDto, PlayerPosition};
 
 use super::widget::{get_widget_text, Widget};
 
@@ -391,4 +392,87 @@ pub fn render_ball(
             height: 1,
         },
     );
+}
+
+pub fn render_game(
+    game: &GameDto,
+    our_player_id: Uuid,
+    player_color: ratatui::style::Color,
+    other_players_color: ratatui::style::Color,
+    frame: &mut Frame,
+) {
+    // Calculate the game area and scaling factors once
+    let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(&frame);
+
+    // Render the game area border
+    frame.render_widget(Block::bordered(), game_area_bounding_box);
+
+    // Render players scores
+    for player in game.players.values() {
+        let desc = format!(" {} {} ", player.name, player.score);
+        let desc_len = desc.len() as u16;
+
+        match player.position {
+            Some(PlayerPosition::Top) => {
+                // Position at top-center of the game area
+                let x = game_area_bounding_box.x + game_area_bounding_box.width / 2 - desc_len / 2;
+                let y = game_area_bounding_box.y;
+                frame.render_widget(
+                    Paragraph::new(desc).alignment(Alignment::Center),
+                    Rect::new(x, y, desc_len, 1),
+                );
+            }
+            Some(PlayerPosition::Bottom) => {
+                // Position at bottom-center of the game area
+                let x = game_area_bounding_box.x + game_area_bounding_box.width / 2 - desc_len / 2;
+                let y = game_area_bounding_box.y + game_area_bounding_box.height - 1;
+                frame.render_widget(
+                    Paragraph::new(desc).alignment(Alignment::Center),
+                    Rect::new(x, y, desc_len, 1),
+                );
+            }
+            Some(PlayerPosition::Left) => {
+                // Vertical text on the left side
+                let x = game_area_bounding_box.x;
+                let y = game_area_bounding_box.y + game_area_bounding_box.height / 2 - desc_len / 2;
+                frame.render_widget(
+                    Paragraph::new(
+                        desc.chars()
+                            .map(|c| Line::from(c.to_string()))
+                            .collect::<Vec<Line>>(),
+                    ),
+                    Rect::new(x, y, 1, desc_len),
+                );
+            }
+            Some(PlayerPosition::Right) => {
+                // Vertical text on the right side
+                let x = game_area_bounding_box.x + game_area_bounding_box.width - 1;
+                let y = game_area_bounding_box.y + game_area_bounding_box.height / 2 - desc_len / 2;
+                frame.render_widget(
+                    Paragraph::new(
+                        desc.chars()
+                            .map(|c| Line::from(c.to_string()))
+                            .collect::<Vec<Line>>(),
+                    ),
+                    Rect::new(x, y, 1, desc_len),
+                );
+            }
+            None => {}
+        }
+    }
+
+    // Render players
+    for player in game.players.values() {
+        let player_color = if player.id == our_player_id {
+            player_color
+        } else {
+            other_players_color
+        };
+        render_player(player, player_color, frame, &game_area, scale_x, scale_y);
+    }
+
+    // Render the ball
+    if let Some(ball) = &game.ball {
+        render_ball(ball, frame, &game_area, scale_x, scale_y);
+    }
 }

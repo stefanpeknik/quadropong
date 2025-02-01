@@ -5,7 +5,7 @@ use crate::common::PlayerPosition;
 
 use super::game_end::GameEnd;
 use super::traits::{HasConfig, Render, State, Update};
-use super::utils::render::{calculate_game_area, render_ball, render_player};
+use super::utils::render::{calculate_game_area, render_ball, render_game, render_player};
 
 use crossterm::event::KeyCode;
 use log::{debug, error, info};
@@ -215,84 +215,13 @@ impl Update for GameBoard {
 impl Render for GameBoard {
     fn render(&self, frame: &mut Frame) {
         if let Ok(game) = self.game.lock() {
-            // Calculate the game area and scaling factors once
-            let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(&frame);
-
-            // Render the game area border
-            frame.render_widget(Block::bordered(), game_area_bounding_box);
-
-            // Render players scores
-            for player in game.players.values() {
-                let desc = format!(" {} {} ", player.name, player.score);
-                let desc_len = desc.len() as u16;
-
-                match player.position {
-                    Some(PlayerPosition::Top) => {
-                        // Position at top-center of the game area
-                        let x = game_area_bounding_box.x + game_area_bounding_box.width / 2
-                            - desc_len / 2;
-                        let y = game_area_bounding_box.y;
-                        frame.render_widget(
-                            Paragraph::new(desc).alignment(Alignment::Center),
-                            Rect::new(x, y, desc_len, 1),
-                        );
-                    }
-                    Some(PlayerPosition::Bottom) => {
-                        // Position at bottom-center of the game area
-                        let x = game_area_bounding_box.x + game_area_bounding_box.width / 2
-                            - desc_len / 2;
-                        let y = game_area_bounding_box.y + game_area_bounding_box.height - 1;
-                        frame.render_widget(
-                            Paragraph::new(desc).alignment(Alignment::Center),
-                            Rect::new(x, y, desc_len, 1),
-                        );
-                    }
-                    Some(PlayerPosition::Left) => {
-                        // Vertical text on the left side
-                        let x = game_area_bounding_box.x;
-                        let y = game_area_bounding_box.y + game_area_bounding_box.height / 2
-                            - desc_len / 2;
-                        frame.render_widget(
-                            Paragraph::new(
-                                desc.chars()
-                                    .map(|c| Line::from(c.to_string()))
-                                    .collect::<Vec<Line>>(),
-                            ),
-                            Rect::new(x, y, 1, desc_len),
-                        );
-                    }
-                    Some(PlayerPosition::Right) => {
-                        // Vertical text on the right side
-                        let x = game_area_bounding_box.x + game_area_bounding_box.width - 1;
-                        let y = game_area_bounding_box.y + game_area_bounding_box.height / 2
-                            - desc_len / 2;
-                        frame.render_widget(
-                            Paragraph::new(
-                                desc.chars()
-                                    .map(|c| Line::from(c.to_string()))
-                                    .collect::<Vec<Line>>(),
-                            ),
-                            Rect::new(x, y, 1, desc_len),
-                        );
-                    }
-                    None => {}
-                }
-            }
-
-            // Render players
-            for player in game.players.values() {
-                let player_color = if player.id == self.our_player_id {
-                    self.config.player_color
-                } else {
-                    self.config.other_players_color
-                };
-                render_player(player, player_color, frame, &game_area, scale_x, scale_y);
-            }
-
-            // Render the ball
-            if let Some(ball) = &game.ball {
-                render_ball(ball, frame, &game_area, scale_x, scale_y);
-            }
+            render_game(
+                &game,
+                self.our_player_id,
+                self.config.player_color,
+                self.config.other_players_color,
+                frame,
+            );
         } else {
             error!("Failed to lock game");
         }
