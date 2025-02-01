@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -30,11 +30,34 @@ impl Ball {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, player_positions: Vec<PlayerPosition>) {
         self.last_touched_by = None;
         self.position = Vec2 { x: 5.0, y: 5.0 };
 
-        self.velocity = Vec2 { x: 0.0, y: 0.125 };
+        let initial_speed = 0.125;
+
+        self.velocity = match player_positions.choose(&mut rand::rng()) {
+            Some(PlayerPosition::Top) => Vec2 {
+                x: 0.0,
+                y: initial_speed,
+            },
+            Some(PlayerPosition::Bottom) => Vec2 {
+                x: 0.0,
+                y: -initial_speed,
+            },
+            Some(PlayerPosition::Left) => Vec2 {
+                x: initial_speed,
+                y: 0.0,
+            },
+            Some(PlayerPosition::Right) => Vec2 {
+                x: -initial_speed,
+                y: 0.0,
+            },
+            None => Vec2 {
+                x: 0.0,
+                y: initial_speed,
+            },
+        };
     }
 
     pub fn update_position(&mut self) {

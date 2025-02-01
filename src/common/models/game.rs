@@ -157,7 +157,12 @@ impl Game {
         if let Some(ref mut ball) = self.ball {
             last_touched = ball.last_touched_by;
             self.last_goal_at = Some(Utc::now());
-            ball.reset();
+            ball.reset(
+                self.players
+                    .values()
+                    .map(|p| p.position.unwrap_or(PlayerPosition::Top))
+                    .collect(),
+            );
         }
 
         if let Some(id) = last_touched {
