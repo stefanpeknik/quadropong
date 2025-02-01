@@ -277,7 +277,7 @@ impl Render for Lobby {
             frame.render_widget(lobby_id_paragraph, inner_lobby_id_area);
             frame.render_widget(lobby_id_block, lobby_id_area);
 
-            render_player_list(frame, &list, outer_rect.inner(Margin::new(5, 5)));
+            render_player_list(frame, &list, outer_rect.inner(Margin::new(5, 2)));
         } else {
             error!("Failed to lock game");
         }

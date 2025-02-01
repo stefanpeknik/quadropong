@@ -72,11 +72,13 @@ pub fn evenly_distanced_rects(rect: Rect, num_rects: usize) -> Rc<[Rect]> {
 /// Renders a list of strings evenly distributed and centered within a rectangle.
 /// The selected item is highlighted.
 pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, rect: Rect) {
-    let vertical_text_spaces = evenly_distanced_rects(rect, items.len());
+    let layout = Layout::vertical(std::iter::repeat(Constraint::Length(1)).take(items.len()))
+        .flex(Flex::SpaceAround)
+        .split(rect);
 
     for (i, (text, area)) in items
         .iter()
-        .zip(vertical_text_spaces.iter()) // skip the first area as that only creates space from the top
+        .zip(layout.iter()) // skip the first area as that only creates space from the top
         .enumerate()
     {
         let text = if i == selected_index {
@@ -85,28 +87,31 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
             Line::from(text.as_str())
         };
 
-        render_text_in_center_of_rect(frame, Paragraph::new(text), *area);
+        frame.render_widget(Paragraph::new(text).centered(), *area);
     }
 }
 
 /// Renders a list of players
 pub fn render_player_list(frame: &mut Frame, items: &Vec<(String, bool)>, rect: Rect) {
-    let vertical_text_spaces = evenly_distanced_rects(rect, 4);
+    let layout = Layout::vertical(std::iter::repeat(Constraint::Length(1)).take(4))
+        .flex(Flex::SpaceAround)
+        .split(rect);
 
-    for ((text, is_ready), area) in items.iter().zip(vertical_text_spaces.iter()) {
+    for ((text, is_ready), area) in items.iter().zip(layout.iter()) {
         let [text_area, ready_area] =
-            Layout::horizontal(vec![Constraint::Percentage(100), Constraint::Length(1)])
+            Layout::horizontal(vec![Constraint::Fill(1), Constraint::Length(1)])
+                .flex(Flex::End)
                 .areas(*area);
 
         let ready_symbol = if *is_ready { "✓".green() } else { "X".red() };
 
         frame.render_widget(
             Paragraph::new(Line::from(text.clone())).centered(),
-            evenly_distanced_rects(text_area, 2)[1],
+            text_area,
         );
         frame.render_widget(
             Paragraph::new(Line::from(ready_symbol).right_aligned()),
-            evenly_distanced_rects(ready_area, 2)[1],
+            ready_area,
         );
     }
 }

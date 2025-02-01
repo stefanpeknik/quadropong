@@ -12,7 +12,7 @@ use super::utils::widget::WidgetTrait;
 
 use crossterm::event::KeyCode;
 use log::{error, info};
-use ratatui::layout::{Constraint, Layout, Position};
+use ratatui::layout::{Constraint, Flex, Layout, Position};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Paragraph, Wrap};
@@ -187,16 +187,16 @@ impl Render for CreateOrJoinLobby {
 
         let inner_rect = render_inner_rectangle(frame, outer_rect);
 
-        let layout = Layout::vertical(vec![
-            Constraint::Percentage(30),
-            Constraint::Percentage(20),
-            Constraint::Length(3),
-            Constraint::Percentage(5),
-            Constraint::Percentage(20),
-            Constraint::Percentage(5),
-        ]);
-
-        let [create_area, _, join_area, _, error_area, _] = layout.areas(inner_rect);
+        let [create_area, join_area] =
+            Layout::vertical(vec![Constraint::Length(1), Constraint::Length(3)])
+                .flex(Flex::SpaceAround)
+                .areas(inner_rect);
+        let [_, error_area, _] = Layout::vertical(vec![
+            Constraint::Fill(1),
+            Constraint::Length(2),
+            Constraint::Length(1),
+        ])
+        .areas(inner_rect);
 
         // render create lobby area
         let create_area_text = if self.options[self.selected] == Options::Create {
@@ -204,10 +204,7 @@ impl Render for CreateOrJoinLobby {
         } else {
             Line::from(Options::Create.to_string())
         };
-        frame.render_widget(
-            Paragraph::new(create_area_text).centered(),
-            evenly_distanced_rects(create_area, 2)[1],
-        );
+        frame.render_widget(Paragraph::new(create_area_text).centered(), create_area);
 
         let block_width_layout = Layout::horizontal(vec![
             Constraint::Percentage(15),
