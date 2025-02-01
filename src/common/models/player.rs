@@ -37,7 +37,7 @@ impl Player {
             score: 0,
             addr: None,
             position: None,
-            paddle_delta: 0.15,
+            paddle_delta: 0.3,
             paddle_position: 5.0,
             paddle_width: 1.0,
             is_ready: is_ai, // AI players are always ready
