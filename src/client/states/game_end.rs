@@ -1,8 +1,8 @@
 use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    layout::{Constraint, Direction, Flex, Layout, Margin, Rect},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -68,10 +68,14 @@ impl Render for GameEnd {
         let outer_rect = render_outer_rectangle(
             frame,
             " quadropong - Game End ",
-            vec![" Press Enter to return to the main menu ".into()],
+            vec![" Return to main menu ".into(), "<Enter> ".light_blue()],
         );
 
-        let inner = render_inner_rectangle(frame, outer_rect);
+        let inner = outer_rect.inner(Margin {
+            horizontal: 5,
+            vertical: 5,
+        });
+        // let inner = render_inner_rectangle(frame, outer_rect);
 
         // Sort players by score (assuming PlayerDto has a `score` field)
         let mut players: Vec<&PlayerDto> = self.game.players.values().collect();
@@ -82,95 +86,71 @@ impl Render for GameEnd {
         let podium_width = inner.width / 5; // Adjust width to fit all podiums
 
         // Create a layout for the podiums and the 4th player message
-        let main_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(
-                [
-                    Constraint::Min(1),    // Podiums
-                    Constraint::Length(1), // Space for the 4th player message
-                ]
-                .as_ref(),
-            )
-            .split(inner);
+        let [_, podium_area, _, humiliation_area, _] = Layout::vertical(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(60),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Percentage(10),
+        ])
+        .areas(inner);
 
         // Create a layout for the podiums with 1st place centered
-        let podium_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(
-                [
-                    Constraint::Percentage(25),       // Left spacing
-                    Constraint::Length(podium_width), // 2nd place
-                    Constraint::Length(podium_width), // 1st place
-                    Constraint::Length(podium_width), // 3rd place
-                    Constraint::Percentage(25),       // Right spacing
-                ]
-                .as_ref(),
-            )
-            .split(main_layout[0]); // Use the top part of the main layout
+        let [second_place_area, first_place_area, third_place_area] = Layout::horizontal(vec![
+            Constraint::Length(podium_width),
+            Constraint::Length(podium_width),
+            Constraint::Length(podium_width),
+        ])
+        .flex(Flex::Center)
+        .areas(podium_area);
 
         // Draw each podium
-        for (i, player) in players.iter().take(3).enumerate() {
+        for (i, (player, podium_height)) in players.iter().take(3).zip(podium_heights).enumerate() {
             // Determine the podium position based on rank
             let rect = match i {
-                0 => podium_layout[2], // 1st place (center)
-                1 => podium_layout[1], // 2nd place (left)
-                2 => podium_layout[3], // 3rd place (right)
+                0 => first_place_area,
+                1 => second_place_area,
+                2 => third_place_area,
                 _ => unreachable!(),
             };
 
             let podium_rect = Rect::new(
                 rect.x,
-                main_layout[0].y + main_layout[0].height - podium_heights[i],
+                podium_area.y + podium_area.height - podium_height,
                 podium_width,
-                podium_heights[i],
+                podium_height,
             );
 
             // Draw the podium block
-            let podium_block = Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().bg(Color::Gray));
+            let podium_block = Block::bordered();
             frame.render_widget(podium_block, podium_rect);
 
             // Draw the player name and crown (if 1st place)
             let name_paragraph = Paragraph::new(if i == 0 {
                 // For 1st place, render the crown on top of the name
-                vec![
-                    Line::from(Span::styled("👑", Style::default().fg(Color::Yellow))),
-                    Line::from(Span::styled(
-                        player.name.clone(),
-                        Style::default().fg(Color::White),
-                    )),
-                ]
+                vec![Line::from("👑"), Line::from(player.name.clone())]
             } else {
                 // For 2nd and 3rd, just render the name
-                vec![Line::from(Span::styled(
-                    player.name.clone(),
-                    Style::default().fg(Color::White),
-                ))]
+                vec![Line::from("\n"), Line::from(player.name.clone())]
             })
-            .alignment(ratatui::layout::Alignment::Center); // Center the text
+            .centered();
 
             frame.render_widget(
                 name_paragraph,
-                Rect::new(
-                    podium_rect.x,
-                    podium_rect.y - 2, // Adjust for the crown and name
-                    podium_rect.width,
-                    2, // Height for crown and name
-                ),
+                Rect::new(podium_rect.x, podium_rect.y - 2, podium_rect.width, 2),
             );
 
             // Draw the podium number (1st, 2nd, 3rd)
-            let number_paragraph = Paragraph::new(Line::from(vec![Span::styled(
+            let number_paragraph = Paragraph::new(Line::from(
                 match i {
                     0 => "1st",
                     1 => "2nd",
                     2 => "3rd",
                     _ => "",
                 }
-                .to_string(),
-                Style::default().fg(Color::Yellow),
-            )]));
+                .to_string()
+                .yellow(),
+            ));
             frame.render_widget(
                 number_paragraph,
                 Rect::new(
@@ -190,16 +170,10 @@ impl Render for GameEnd {
                 fourth_player.name
             );
 
-            let humiliation_paragraph = Paragraph::new(Line::from(vec![Span::styled(
-                humiliation_text,
-                Style::default().fg(Color::Red),
-            )]))
-            .alignment(ratatui::layout::Alignment::Center); // Center the text
+            let humiliation_paragraph =
+                Paragraph::new(Line::from(humiliation_text.red())).centered();
 
-            frame.render_widget(
-                humiliation_paragraph,
-                main_layout[1], // Use the bottom part of the main layout
-            );
+            frame.render_widget(humiliation_paragraph, humiliation_area);
         }
     }
 }
