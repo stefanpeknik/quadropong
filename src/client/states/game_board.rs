@@ -5,13 +5,10 @@ use crate::common::PlayerPosition;
 
 use super::game_end::GameEnd;
 use super::traits::{HasConfig, Render, State, Update};
-use super::utils::render::{calculate_game_area, render_ball, render_game, render_player};
+use super::utils::render::render_game;
 
 use crossterm::event::KeyCode;
 use log::{debug, error, info};
-use ratatui::layout::{Alignment, Rect};
-use ratatui::text::Line;
-use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;

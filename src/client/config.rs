@@ -24,8 +24,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             player_name: "player".to_string(),
-            api_url: "http://127.0.0.1:3000".to_string(),
-            socket_addr: "127.0.0.1:34254".to_string(),
+            api_url: "http://localhost:3000".to_string(),
+            socket_addr: "localhost:34254".to_string(),
             player_color: Color::Green,
             other_players_color: Color::White,
             fps: 60,

@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::common::{
-    models::{Ball, ClientInput, ClientInputType, Direction, GameState},
+    models::{Ball, ClientInput, ClientInputType, GameState},
     GameRooms,
 };
 

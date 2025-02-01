@@ -1,10 +1,10 @@
 use axum::async_trait;
 use crossterm::event::KeyCode;
 use ratatui::{
-    layout::{Constraint, Direction, Flex, Layout, Margin, Rect},
-    style::{Color, Style, Stylize},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    layout::{Constraint, Flex, Layout, Margin, Rect},
+    style::Stylize,
+    text::Line,
+    widgets::{Block, Paragraph},
     Frame,
 };
 use uuid::Uuid;
@@ -17,7 +17,7 @@ use crate::{
 use super::{
     menu::Menu,
     traits::{HasConfig, Render, State, Update},
-    utils::render::{render_inner_rectangle, render_outer_rectangle},
+    utils::render::render_outer_rectangle,
 };
 
 pub struct GameEnd {
