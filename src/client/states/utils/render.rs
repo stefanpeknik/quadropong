@@ -122,10 +122,11 @@ pub fn render_settings(
 
     for _ in 0..items.len() {
         constraints.push(Constraint::Length(3));
-        constraints.push(Constraint::Percentage(10));
     }
 
-    let layout = Layout::vertical(constraints).split(rect);
+    let layout = Layout::vertical(constraints)
+        .flex(Flex::SpaceAround)
+        .split(rect);
 
     let input_instructions =
         Line::from(vec![" Paste ".into(), "<Tab> ".green().bold()]).right_aligned();
@@ -137,58 +138,56 @@ pub fn render_settings(
     ])
     .right_aligned();
 
-    for (i, ((text, areas), widget)) in items
+    for (i, ((text, widget_area), widget)) in items
         .iter()
-        .zip(layout.chunks(2))
+        .zip(layout.iter())
         .zip(all_widgets.iter()) // skip the first area as that only creates space from the top
         .enumerate()
     {
-        if let [widget_area, _] = areas {
-            let block_text = if i == selected_index {
-                Line::from(format!(" >{}< ", text)).bold().centered()
-            } else {
-                Line::from(text.as_str()).centered()
-            };
-            let widget_block = Block::bordered().title(block_text.clone());
+        let block_text = if i == selected_index {
+            Line::from(format!(" >{}< ", text)).bold().centered()
+        } else {
+            Line::from(text.as_str()).centered()
+        };
+        let widget_block = Block::bordered().title(block_text.clone());
 
-            let inner_input_area = widget_block.inner(*widget_area);
-            let mut color_check = "";
-            let mut style = Style::default();
+        let inner_input_area = widget_block.inner(*widget_area);
+        let mut color_check = "";
+        let mut style = Style::default();
 
-            match widget {
-                Widget::Input(input) => {
-                    if let Widget::Input(active_input) = active_widget {
-                        if std::ptr::eq(input, active_input) {
-                            frame.set_cursor_position(Position::new(
-                                inner_input_area.x + input.char_index as u16,
-                                inner_input_area.y,
-                            ));
-                        }
+        match widget {
+            Widget::Input(input) => {
+                if let Widget::Input(active_input) = active_widget {
+                    if std::ptr::eq(input, active_input) {
+                        frame.set_cursor_position(Position::new(
+                            inner_input_area.x + input.char_index as u16,
+                            inner_input_area.y,
+                        ));
                     }
-                    frame.render_widget(
-                        widget_block.title_bottom(input_instructions.clone()),
-                        *widget_area,
-                    );
                 }
-                Widget::Slider(slider) => {
-                    frame.render_widget(
-                        widget_block.title_bottom(slider_instructions.clone()),
-                        *widget_area,
-                    );
-                    style = Style::default().bg(slider.clone().get_color());
-                    color_check = "     ";
-                }
+                frame.render_widget(
+                    widget_block.title_bottom(input_instructions.clone()),
+                    *widget_area,
+                );
             }
-
-            frame.render_widget(
-                Paragraph::new(Line::from(vec![
-                    Span::raw(get_widget_text(&widget)),
-                    Span::raw(" "),
-                    Span::styled(color_check, style),
-                ])),
-                inner_input_area,
-            );
+            Widget::Slider(slider) => {
+                frame.render_widget(
+                    widget_block.title_bottom(slider_instructions.clone()),
+                    *widget_area,
+                );
+                style = Style::default().bg(slider.clone().get_color());
+                color_check = "     ";
+            }
         }
+
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::raw(get_widget_text(&widget)),
+                Span::raw(" "),
+                Span::styled(color_check, style),
+            ])),
+            inner_input_area,
+        );
     }
 }
 

@@ -188,7 +188,7 @@ impl Render for Settings {
 
         let inner_rect = outer_rect.inner(Margin {
             horizontal: 5,
-            vertical: 5,
+            vertical: 2,
         });
 
         if let Ok(_settings) = self.config.lock() {
