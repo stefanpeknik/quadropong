@@ -1,0 +1,9 @@
+services:
+  pong-server:
+    build: .
+    ports:
+      - "3000:3000"
+      - "34254:34254/udp"
+    environment:
+      PORT: 3000
+      UDP_PORT: 34254

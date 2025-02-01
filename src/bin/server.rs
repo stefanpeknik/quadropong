@@ -2,7 +2,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use log::{debug, error, info};
+use log::{error, info};
 use quadropong::{
     common::{
         game_loop::process_input,
@@ -11,7 +11,7 @@ use quadropong::{
     },
     server::api::{add_bot, create_game, get_game_by_id, get_games, join_game},
 };
-use std::{collections::VecDeque, net::UdpSocket, sync::Arc, time::Duration};
+use std::{collections::VecDeque, env, net::UdpSocket, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
 
 fn setup_logger() -> Result<(), fern::InitError> {
@@ -37,10 +37,20 @@ async fn main() {
     // Create a shared GameRooms instance
     let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
 
-    let port = 3000;
+    let port: u16 = env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+
+    let udp_port: u16 = env::var("UDP_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(34254);
+
     let addr = format!("0.0.0.0:{}", port);
 
-    let socket = UdpSocket::bind("0.0.0.0:34254").expect("Failed to bind to UDP socket");
+    let socket =
+        UdpSocket::bind(format!("0.0.0.0:{}", udp_port)).expect("Failed to bind to UDP socket");
     let _ = socket.set_nonblocking(true);
     let socket = Arc::new(socket);
 
