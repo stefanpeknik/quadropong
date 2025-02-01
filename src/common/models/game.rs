@@ -20,7 +20,7 @@ const GAME_SIZE: f32 = 10.0;
 const MAX_PLAYERS: usize = 4;
 const PING_TIMEOUT: u64 = 2000;
 const MAX_SCORE: u32 = 10;
-const GOAL_TIMEOUT: u64 = 350;
+const GOAL_TIMEOUT: u64 = 500;
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -147,7 +147,7 @@ impl Game {
             .find(|player| player.position == Some(side))
     }
 
-    pub fn goal_action(&mut self) {
+    pub fn goal_action(&mut self, goal_pos: PlayerPosition) {
         if self.state != GameState::Active {
             return;
         }
@@ -166,10 +166,12 @@ impl Game {
         }
 
         if let Some(id) = last_touched {
-            info!("game {}: player {} scored", self.id, id);
             let player = self.get_player_mut(&id);
             if let Some(player) = player {
-                player.increment_score();
+                if player.position != Some(goal_pos) {
+                    player.increment_score();
+                    info!("game {}: player {} scored", self.id, id);
+                }
             }
         }
     }
@@ -231,8 +233,8 @@ impl Game {
                 ball.calculate_wall_reflection(*empty_pos);
             }
 
-            if ball.clone().is_goal() {
-                self.goal_action();
+            if let Some(goal_pos) = ball.clone().is_goal() {
+                self.goal_action(goal_pos);
 
                 if self
                     .players

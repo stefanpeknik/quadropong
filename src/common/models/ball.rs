@@ -65,11 +65,18 @@ impl Ball {
         self.position.y += self.velocity.y;
     }
 
-    pub fn is_goal(self) -> bool {
-        self.position.x - self.radius < 0.0
-            || self.position.x + self.radius > 10.0
-            || self.position.y - self.radius < 0.0
-            || self.position.y + self.radius > 10.0
+    pub fn is_goal(self) -> Option<PlayerPosition> {
+        if self.position.x - self.radius < 0.0 {
+            Some(PlayerPosition::Left)
+        } else if self.position.x + self.radius > 10.0 {
+            Some(PlayerPosition::Right)
+        } else if self.position.y - self.radius < 0.0 {
+            Some(PlayerPosition::Top)
+        } else if self.position.y + self.radius > 10.0 {
+            Some(PlayerPosition::Bottom)
+        } else {
+            None
+        }
     }
 
     pub fn calculate_wall_reflection(&mut self, pos: PlayerPosition) {
