@@ -10,9 +10,11 @@ use super::states::{
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub player_name: String,
+    #[serde(skip)]
     pub api_url: String,
+    #[serde(skip)]
     pub socket_addr: String,
+    pub player_name: String,
     pub player_color: Color,
     pub other_players_color: Color,
     pub fps: u32,
