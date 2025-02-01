@@ -343,7 +343,6 @@ impl Game {
 
                             ball.position.x = paddle_x + ball.radius;
 
-                            player.increment_score();
                             ball.last_touched_by = Some(player.id);
                         }
                     }

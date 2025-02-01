@@ -92,8 +92,6 @@ pub async fn add_bot(
     State(app_state): State<Arc<Mutex<GameRooms>>>,
     Path(game_id): Path<String>,
 ) -> Result<Json<Player>, StatusCode> {
-    println!("Adding bot");
-
     let game_uuid = Uuid::parse_str(&game_id).map_err(|_e| StatusCode::BAD_REQUEST)?;
 
     let mut game_rooms = app_state.lock().await;
