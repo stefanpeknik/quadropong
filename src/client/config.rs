@@ -53,6 +53,20 @@ impl Config {
         ]
     }
 
+    pub fn get_log_path() -> Option<path::PathBuf> {
+        if let Some(mut log_dir) = dirs::data_local_dir() {
+            log_dir.push("quadropong");
+            fs::create_dir_all(&log_dir).ok()?;
+            log_dir.push(format!(
+                "{}-quadropong.log",
+                Utc::now().format("%Y-%m-%d-%H-%M-%S")
+            ));
+            Some(log_dir)
+        } else {
+            None
+        }
+    }
+
     pub fn get_config_path() -> Option<path::PathBuf> {
         if let Some(mut config_dir) = dirs::config_local_dir() {
             config_dir.push("quadropong");

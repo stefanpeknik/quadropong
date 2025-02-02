@@ -1,10 +1,9 @@
-use chrono::Utc;
-use log::error;
+use log::{error, info};
 use std::{io, path::PathBuf};
 
 use quadropong::client::{app::App, config::Config};
 
-fn setup_logger(log_dir: PathBuf) -> Result<(), fern::InitError> {
+fn setup_logger(log_path: PathBuf) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -15,17 +14,15 @@ fn setup_logger(log_dir: PathBuf) -> Result<(), fern::InitError> {
             ))
         })
         .level(log::LevelFilter::Debug) // Set global log level
-        .chain(fern::log_file(log_dir.join(format!(
-            "{}-quadropong.log",
-            Utc::now().format("%Y-%m-%d-%H-%M-%S")
-        )))?)
+        .chain(fern::log_file(log_path)?) // Log to file
         .apply()?;
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
-    let log_dir = if let Some(path) = Config::get_config_path() {
+    let log_dir = if let Some(path) = Config::get_log_path() {
+        info!("Using log path: {}", path.display());
         path
     } else {
         error!("Failed to get config path, using current directory");
