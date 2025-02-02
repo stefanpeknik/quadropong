@@ -508,4 +508,62 @@ mod tests {
         mock.assert();
         assert!(matches!(result, Err(TcpError::ServerError(_))));
     }
+
+    #[tokio::test]
+    async fn test_play_again_success() {
+        let mut server = Server::new_async().await;
+        let game_id = Uuid::new_v4();
+        let player_id = Uuid::new_v4();
+        let username = "test_user";
+        let mock = server
+            .mock("POST", format!("/game/{}/play_again", game_id).as_str())
+            .match_header("Content-Type", "application/json")
+            .match_body(json!({ "username": username }).to_string().as_str())
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                json!({
+                    "id": player_id,
+                    "name": username,
+                    "joined_at": "2023-10-01T12:34:56Z",
+                    "ping_timestamp": null,
+                    "score": 0,
+                    "addr": null,
+                    "position": "Top",
+                    "paddle_position": 0.5,
+                    "paddle_delta": 0.0,
+                    "paddle_width": 0.2,
+                    "is_ready": false,
+                    "is_ai": false
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = TcpClient::new(&server.url());
+        let result = client.play_again(game_id, Some(username.to_string())).await;
+
+        mock.assert();
+        let player = result.unwrap();
+        assert_eq!(player.id, player_id);
+        assert_eq!(player.name, username);
+    }
+
+    #[tokio::test]
+    async fn test_play_again_failure() {
+        let mut server = Server::new_async().await;
+        let game_id = Uuid::new_v4();
+        let mock = server
+            .mock("POST", format!("/game/{}/play_again", game_id).as_str())
+            .with_status(400)
+            .create_async()
+            .await;
+
+        let client = TcpClient::new(&server.url());
+        let result = client.play_again(game_id, None).await;
+
+        mock.assert();
+        assert!(matches!(result, Err(TcpError::ServerError(_))));
+    }
 }
