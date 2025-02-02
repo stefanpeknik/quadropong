@@ -2,9 +2,9 @@ use std::rc::Rc;
 
 use ratatui::{
     layout::{Alignment, Constraint, Flex, Layout, Margin, Position, Rect},
-    style::{Style, Stylize},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     Frame,
 };
 use uuid::Uuid;
@@ -22,6 +22,36 @@ pub fn into_title(input: &str) -> String {
         .map(|c| c.to_string())
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+pub fn render_disconnect_popup(frame: &mut Frame, area: Rect) {
+    let [popup_area] = Layout::horizontal(vec![Constraint::Percentage(50)])
+        .flex(Flex::Center)
+        .areas(area);
+    let [popup_bg_area] = Layout::vertical(vec![Constraint::Length(5)])
+        .flex(Flex::Center)
+        .areas(popup_area);
+    let [popup_text_area] = Layout::vertical(vec![Constraint::Length(3)])
+        .flex(Flex::Center)
+        .areas(popup_area);
+
+    let fill_string = std::iter::repeat("█")
+        .take(popup_bg_area.height as usize * popup_bg_area.width as usize)
+        .collect::<String>();
+    frame.render_widget(
+        Paragraph::new(fill_string)
+            .wrap(Wrap { trim: true })
+            .fg(Color::LightRed)
+            .on_light_red(),
+        popup_bg_area,
+    );
+
+    frame.render_widget(
+        Block::new()
+            .title(Line::from(" DISCONNECTED ".white()).centered())
+            .title_bottom(Line::from(vec![" Leave ".white(), "<Esc> ".white()]).centered()),
+        popup_text_area,
+    );
 }
 
 /// Draws the outer rectangle, renders it, and returns its Rect

@@ -1,15 +1,17 @@
 use crate::client::config;
 use crate::client::net::udp::UdpClient;
+use crate::client::states::menu::Menu;
 use crate::common::models::{ClientInput, ClientInputType, Direction, GameDto, GameState};
 use crate::common::PlayerPosition;
 
 use super::game_end::GameEnd;
 use super::traits::{HasConfig, Render, State, Update};
-use super::utils::render::render_game;
+use super::utils::render::{render_disconnect_popup, render_game};
 
 use crossterm::event::KeyCode;
 use log::{debug, error, info};
 use ratatui::Frame;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -25,6 +27,7 @@ pub struct GameBoard {
     _ping_handle: JoinHandle<()>,
     udp_client: Arc<UdpClient>,
     config: config::Config,
+    disconnected: Arc<AtomicBool>,
 }
 
 impl GameBoard {
@@ -41,15 +44,20 @@ impl GameBoard {
             .unwrap_or(PlayerPosition::Left); // TODO: Handle this error better
         let game = Arc::new(Mutex::new(game));
         let cancellation_token = CancellationToken::new();
+        let disconnected = Arc::new(AtomicBool::new(false));
 
         let game_clone = Arc::clone(&game);
         let udp_client_clone = Arc::clone(&udp_client);
         let cancellation_token_clone = cancellation_token.clone();
+        let disconnected_clone = Arc::clone(&disconnected);
         let receive_update_handle = tokio::spawn(async move {
             loop {
                 tokio::select! {
                     // Exit loop on cancellation
                     _ = cancellation_token_clone.cancelled() => break,
+                    _ = tokio::time::sleep(std::time::Duration::from_secs(3)) => {
+                        disconnected_clone.store(true, Ordering::Relaxed);
+                    }
                     // Process incoming game updates
                     result = udp_client_clone.recv_updated_game() => {
                         match result {
@@ -105,6 +113,7 @@ impl GameBoard {
             _ping_handle: ping_handle,
             udp_client,
             config,
+            disconnected,
         }
     }
 
@@ -153,14 +162,22 @@ impl Update for GameBoard {
             match key_code {
                 KeyCode::Esc => {
                     // TODO: just a placeholder for now
-                    if let Ok(game) = self.game.lock() {
-                        return Ok(Some(Box::new(GameEnd::new(
-                            game.clone(),
-                            self.our_player_id,
-                            self.config.clone(),
-                        ))));
-                    } else {
-                        error!("Failed to lock game at Esc");
+                    match self.disconnected.load(Ordering::Relaxed) {
+                        false => {
+                            if let Ok(game) = self.game.lock() {
+                                return Ok(Some(Box::new(GameEnd::new(
+                                    game.clone(),
+                                    self.our_player_id,
+                                    self.config.clone(),
+                                ))));
+                            } else {
+                                error!("Failed to lock game at Esc");
+                            }
+                        }
+                        true => {
+                            info!("Moving from Lobby to CreateOrJoinLobby");
+                            return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
+                        }
                     }
                 }
                 _ => match self.our_player_position {
@@ -221,6 +238,9 @@ impl Render for GameBoard {
             );
         } else {
             error!("Failed to lock game");
+        }
+        if self.disconnected.load(Ordering::Relaxed) {
+            render_disconnect_popup(frame, frame.area());
         }
     }
 }

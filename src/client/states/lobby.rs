@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::config;
@@ -9,7 +10,7 @@ use crate::common::Game;
 use super::create_or_join_lobby::CreateOrJoinLobby;
 use super::game_board::GameBoard;
 use super::traits::{HasConfig, Render, State, Update};
-use super::utils::render::{render_outer_rectangle, render_player_list};
+use super::utils::render::{render_disconnect_popup, render_outer_rectangle, render_player_list};
 
 use arboard::Clipboard;
 use crossterm::event::KeyCode;
@@ -47,6 +48,7 @@ pub struct Lobby {
     udp_client: Arc<UdpClient>,
     tcp_client: Arc<TcpClient>,
     config: config::Config,
+    disconnected: Arc<AtomicBool>,
 }
 
 impl Lobby {
@@ -59,11 +61,13 @@ impl Lobby {
         let cancellation_token = CancellationToken::new();
         let game_id = game.id;
         let game_dto = Arc::new(Mutex::new(GameDto::from(game)));
+        let disconnected = Arc::new(AtomicBool::new(false));
 
         // Start a task to receive updates
+        let game_clone = Arc::clone(&game_dto);
         let udp_client_clone = Arc::clone(&udp_client);
         let cancellation_token_clone = cancellation_token.clone();
-        let game_clone = Arc::clone(&game_dto);
+        let disconnected_clone = Arc::clone(&disconnected);
         let receive_update_handle = tokio::spawn(async move {
             // send introduction message
             let client_input = ClientInput::new(
@@ -80,6 +84,9 @@ impl Lobby {
                 tokio::select! {
                     // Exit loop on cancellation
                     _ = cancellation_token_clone.cancelled() => break,
+                    _ = tokio::time::sleep(std::time::Duration::from_secs(3)) => {
+                        disconnected_clone.store(true, Ordering::Relaxed);
+                    }
                     // Process incoming game updates
                     result = udp_client_clone.recv_updated_game() => {
                         match result {
@@ -131,6 +138,7 @@ impl Lobby {
             _receive_update_handle: receive_update_handle,
             _ping_handle: ping_handle,
             config,
+            disconnected,
         }
     }
 
@@ -247,8 +255,11 @@ impl Render for Lobby {
             vertical: 1,
         });
 
-        let layout = Layout::vertical(vec![Constraint::Length(3), Constraint::Percentage(90)]);
-        let [lobby_id_area, _] = layout.areas(inner_rect);
+        let layout = Layout::vertical(vec![
+            Constraint::Length(3),
+            Constraint::Fill(1),
+        ]);
+        let [lobby_id_area, lobby_area] = layout.areas(inner_rect);
 
         if let Ok(game) = self.game.lock() {
             let mut list = vec![];
@@ -281,7 +292,11 @@ impl Render for Lobby {
             frame.render_widget(lobby_id_paragraph, inner_lobby_id_area);
             frame.render_widget(lobby_id_block, lobby_id_area);
 
-            render_player_list(frame, &list, outer_rect.inner(Margin::new(5, 2)));
+            render_player_list(frame, &list, lobby_area);
+
+            if self.disconnected.load(Ordering::Relaxed) {
+                render_disconnect_popup(frame, lobby_area);
+            }
         } else {
             error!("Failed to lock game");
         }
