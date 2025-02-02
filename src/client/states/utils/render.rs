@@ -132,9 +132,9 @@ pub fn render_player_list(
 
     for ((text, is_ready, position), area) in items.iter().zip(layout.iter()) {
         let [position_area, text_area, ready_area] = Layout::horizontal(vec![
-            Constraint::Length(6),
+            Constraint::Length(7),
             Constraint::Percentage(50),
-            Constraint::Length(1),
+            Constraint::Length(7),
         ])
         .flex(Flex::SpaceAround)
         .areas(*area);
