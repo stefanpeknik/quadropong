@@ -457,7 +457,10 @@ pub fn render_game(
     // Render players scores
     for player in game.players.values() {
         let desc = format!(" {} {} ", player.name, player.score);
-        let desc_len = desc.len() as u16;
+        let desc_len = desc
+            .len()
+            .min(frame.area().width as usize)
+            .min(frame.area().height as usize) as u16; // Limit to the frame size
 
         match player.position {
             Some(PlayerPosition::Top) => {

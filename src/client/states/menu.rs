@@ -91,7 +91,7 @@ impl Update for Menu {
                         return Ok(Some(Box::new(Settings::new(self.config.clone())?)));
                     }
                 },
-                KeyCode::Char('q') => {
+                KeyCode::Char('q') | KeyCode::Char('Q') => {
                     info!("Moving from Menu to Quit");
                     return Ok(Some(Box::new(Quit::new(self.config.clone())?)));
                 }

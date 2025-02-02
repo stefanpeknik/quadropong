@@ -184,14 +184,18 @@ impl Update for Lobby {
                     self.udp_client.send_client_input(client_input).await?;
                     info!("Toggle player ready");
                 }
-                KeyCode::Char('a') => match self.tcp_client.add_bot(self.game_id).await {
-                    Err(e) => info!("Add bot failed: {}", e),
-                    Ok(_) => info!("Add bot called"),
-                },
-                KeyCode::Char('d') => match self.tcp_client.remove_bot(self.game_id).await {
-                    Err(e) => info!("Remove bot failed: {}", e),
-                    Ok(_) => info!("Remove bot called"),
-                },
+                KeyCode::Char('a') | KeyCode::Char('A') => {
+                    match self.tcp_client.add_bot(self.game_id).await {
+                        Err(e) => info!("Add bot failed: {}", e),
+                        Ok(_) => info!("Add bot called"),
+                    }
+                }
+                KeyCode::Char('d') | KeyCode::Char('D') => {
+                    match self.tcp_client.remove_bot(self.game_id).await {
+                        Err(e) => info!("Remove bot failed: {}", e),
+                        Ok(_) => info!("Remove bot called"),
+                    }
+                }
                 KeyCode::Esc => {
                     info!("Moving from Lobby to CreateOrJoinLobby");
                     return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone())?)));

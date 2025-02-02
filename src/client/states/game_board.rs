@@ -172,7 +172,7 @@ impl Update for GameBoard {
                 }
                 _ => match self.our_player_position {
                     PlayerPosition::Left | PlayerPosition::Right => match key_code {
-                        KeyCode::Up | KeyCode::Char('w') => {
+                        KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
                             if let Some(input) = self.create_move_input(Direction::Negative) {
                                 self.udp_client
                                     .send_client_input(input)
@@ -180,7 +180,7 @@ impl Update for GameBoard {
                                     .unwrap_or_else(|e| error!("Failed to send move input: {}", e));
                             }
                         }
-                        KeyCode::Down | KeyCode::Char('s') => {
+                        KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
                             if let Some(input) = self.create_move_input(Direction::Positive) {
                                 self.udp_client
                                     .send_client_input(input)
@@ -191,7 +191,7 @@ impl Update for GameBoard {
                         _ => {}
                     },
                     PlayerPosition::Top | PlayerPosition::Bottom => match key_code {
-                        KeyCode::Right | KeyCode::Char('d') => {
+                        KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('D') => {
                             if let Some(input) = self.create_move_input(Direction::Positive) {
                                 self.udp_client
                                     .send_client_input(input)
@@ -199,7 +199,7 @@ impl Update for GameBoard {
                                     .unwrap_or_else(|e| error!("Failed to send move input: {}", e));
                             }
                         }
-                        KeyCode::Left | KeyCode::Char('a') => {
+                        KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
                             if let Some(input) = self.create_move_input(Direction::Negative) {
                                 self.udp_client
                                     .send_client_input(input)
