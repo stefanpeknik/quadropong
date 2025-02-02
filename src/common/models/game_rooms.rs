@@ -1,3 +1,4 @@
+use log::info;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -28,6 +29,20 @@ impl GameRooms {
 
     pub fn find_lobby(&mut self, id: Uuid) -> Option<&Game> {
         self.lobbies.get(&id)
+    }
+
+    pub fn delete_games(&mut self) {
+        let to_delete: Vec<Uuid> = self
+            .lobbies
+            .iter()
+            .filter(|(_, game)| game.should_delete_game())
+            .map(|(id, _)| *id)
+            .collect();
+
+        for id in to_delete {
+            info!("game {}: deleting for inactivity", id);
+            self.lobbies.remove(&id);
+        }
     }
 }
 

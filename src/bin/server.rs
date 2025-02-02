@@ -62,9 +62,8 @@ async fn main() {
     let message_queue: Arc<Mutex<VecDeque<ClientInputWithAddr>>> =
         Arc::new(Mutex::new(VecDeque::new()));
 
-    let message_queue_recv = message_queue.clone();
-
     // Spawn UDP receiver task
+    let message_queue_recv = message_queue.clone();
     tokio::spawn(async move {
         let mut buf = [0; 1024];
         loop {
@@ -86,9 +85,18 @@ async fn main() {
         }
     });
 
+    let game_rooms_cleaner = game_rooms.clone();
+    tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(60));
+        loop {
+            info!("Running game room cleaner process");
+            interval.tick().await;
+            game_rooms_cleaner.lock().await.delete_games();
+        }
+    });
+
     let game_rooms_loop = game_rooms.clone();
     let message_queue_loop = message_queue.clone();
-
     tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_millis(1000 / 60));
         loop {
@@ -145,7 +153,7 @@ async fn main() {
 
     match listener {
         Ok(listener) => {
-            info!("listening on {}", listener.local_addr().unwrap());
+            info!("Listening on {}", listener.local_addr().unwrap());
             axum::serve(listener, app(game_rooms)).await.unwrap();
         }
         Err(e) => {

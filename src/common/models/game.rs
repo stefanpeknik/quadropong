@@ -21,6 +21,7 @@ const MAX_PLAYERS: usize = 4;
 const PING_TIMEOUT: u64 = 2000;
 const MAX_SCORE: u32 = 10;
 const GOAL_TIMEOUT: u64 = 750;
+const GAME_DELETE_TIMEOUT: u64 = 60000; // 1 minute
 
 #[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub enum GameState {
@@ -39,6 +40,7 @@ pub struct Game {
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
     pub ball: Option<Ball>,
     pub last_goal_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub finished_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl Game {
@@ -51,6 +53,7 @@ impl Game {
             started_at: None,
             ball: Some(Ball::new()),
             last_goal_at: None,
+            finished_at: None,
         }
     }
 
@@ -95,6 +98,10 @@ impl Game {
     }
 
     pub fn set_game_state(&mut self, state: GameState) {
+        if state == GameState::Finished {
+            self.finished_at = Some(chrono::Utc::now());
+        }
+
         self.state = state;
     }
 
@@ -193,6 +200,15 @@ impl Game {
         for player_id in players_to_remove {
             info!("game {}: player {} timed out", self.id, player_id);
             self.remove_player(player_id);
+        }
+    }
+
+    pub fn should_delete_game(&self) -> bool {
+        if let Some(finished_at) = self.finished_at {
+            let elapsed_since_finished = Utc::now().signed_duration_since(finished_at);
+            (elapsed_since_finished.num_milliseconds() as u64) > GAME_DELETE_TIMEOUT
+        } else {
+            false
         }
     }
 
