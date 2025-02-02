@@ -25,6 +25,10 @@ pub async fn join_game(
         .get_mut(&game_uuid)
         .ok_or(StatusCode::NOT_FOUND)?;
 
+    if game.state != GameState::WaitingForPlayers {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     // Generate player name based on request or player count
     let player_name = match payload.username {
         Some(name) if !name.is_empty() => name,
@@ -143,6 +147,10 @@ pub async fn restart_game(
     if game.state == GameState::Finished {
         game.set_game_state(GameState::WaitingForPlayers);
         game.players.clear();
+    }
+
+    if game.state != GameState::WaitingForPlayers {
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     let player_name = match payload.username {
