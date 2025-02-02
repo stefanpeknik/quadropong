@@ -78,7 +78,7 @@ impl Update for GameEnd {
                                 Ok(game) => {
                                     log::info!("Game received");
                                     return Ok(Some(Box::new(Lobby::new(
-                                        game.into(),
+                                        game,
                                         player.id,
                                         self.config.clone(),
                                     )?)));

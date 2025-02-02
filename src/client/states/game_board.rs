@@ -128,7 +128,7 @@ impl GameBoard {
             ))
         } else {
             error!("Failed to lock game");
-            return None;
+            None
         }
     }
 }

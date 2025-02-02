@@ -43,6 +43,12 @@ pub struct Game {
     pub finished_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Game {
     pub fn new() -> Self {
         Self {
@@ -258,12 +264,7 @@ impl Game {
             if let Some(goal_pos) = ball.clone().is_goal() {
                 self.goal_action(goal_pos);
 
-                if self
-                    .players
-                    .values()
-                    .into_iter()
-                    .any(|p| p.score >= MAX_SCORE)
-                {
+                if self.players.values().any(|p| p.score >= MAX_SCORE) {
                     self.set_game_state(GameState::Finished);
                     info!("game {}: finished", self.id);
                     return;
@@ -416,7 +417,7 @@ mod tests {
         assert_eq!(game.players.len(), 0);
         assert_eq!(game.state, GameState::WaitingForPlayers);
         assert_eq!(game.started_at, None);
-        assert_eq!(game.ball.is_some(), true);
+        assert!(game.ball.is_some());
         assert_eq!(game.last_goal_at, None);
     }
 
@@ -474,7 +475,7 @@ mod tests {
             let player = Player::new("Player".to_string(), false);
             game.add_player(player).unwrap();
         }
-        assert_eq!(game.is_full(), true);
+        assert!(game.is_full());
     }
 
     #[test]
@@ -576,9 +577,9 @@ mod tests {
     #[test]
     fn test_is_ball_in_safe_zone() {
         let ball = Ball::new();
-        assert_eq!(Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING), true);
+        assert!(Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING));
         let mut ball = Ball::new();
         ball.position = Vec2 { x: 0.0, y: 0.0 };
-        assert_eq!(Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING), false);
+        assert!(!Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING));
     }
 }

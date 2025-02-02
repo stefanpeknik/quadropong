@@ -24,7 +24,7 @@ impl From<Game> for GameDto {
             state: game.state,
             created_at: game.created_at,
             started_at: game.started_at,
-            ball: game.ball.map(|ball| BallDto::from(ball)),
+            ball: game.ball.map(BallDto::from),
             players: game
                 .players
                 .into_iter()

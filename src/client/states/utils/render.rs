@@ -36,9 +36,7 @@ pub fn render_disconnect_popup(frame: &mut Frame, area: Rect) {
         .flex(Flex::Center)
         .areas(popup_area);
 
-    let fill_string = std::iter::repeat("█")
-        .take(popup_bg_area.height as usize * popup_bg_area.width as usize)
-        .collect::<String>();
+    let fill_string = "█".repeat(popup_bg_area.height as usize * popup_bg_area.width as usize);
     frame.render_widget(
         Paragraph::new(fill_string)
             .wrap(Wrap { trim: true })
@@ -125,7 +123,7 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
 /// Renders a list of players
 pub fn render_player_list(
     frame: &mut Frame,
-    items: &Vec<(String, bool, Option<PlayerPosition>)>,
+    items: &[(String, bool, Option<PlayerPosition>)],
     rect: Rect,
 ) {
     let layout = Layout::vertical(std::iter::repeat(Constraint::Length(1)).take(4))
@@ -163,7 +161,7 @@ pub fn render_player_list(
 pub fn render_settings(
     frame: &mut Frame,
     items: &[String],
-    all_widgets: &Vec<&Widget>,
+    all_widgets: &[&Widget],
     active_widget: &Widget,
     selected_index: usize,
     rect: Rect,
@@ -182,9 +180,9 @@ pub fn render_settings(
         Line::from(vec![" Paste ".into(), "<Tab> ".green().bold()]).right_aligned();
     let slider_instructions = Line::from(vec![
         " Right".into(),
-        " \u{2190} ".green().into(),
+        " \u{2190} ".green(),
         "| Left".into(),
-        " \u{2192} ".green().into(),
+        " \u{2192} ".green(),
     ])
     .right_aligned();
 
@@ -451,7 +449,7 @@ pub fn render_game(
     frame: &mut Frame,
 ) {
     // Calculate the game area and scaling factors once
-    let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(&frame);
+    let (game_area_bounding_box, game_area, scale_x, scale_y) = calculate_game_area(frame);
 
     // Render the game area border
     frame.render_widget(Block::bordered(), game_area_bounding_box);

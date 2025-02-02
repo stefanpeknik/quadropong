@@ -197,7 +197,7 @@ pub async fn remove_bot(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    return Ok(());
+    Ok(())
 }
 
 // Build the Axum app with routes
@@ -310,7 +310,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(&format!("/game/{}", game_id))
+                    .uri(format!("/game/{}", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -364,7 +364,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/join", game_id))
+                    .uri(format!("/game/{}/join", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -378,13 +378,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "test");
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/join", game_id))
+                    .uri(format!("/game/{}/join", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "" }).to_string().to_string())
                     .unwrap(),
@@ -398,13 +398,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "player_2"); // default name because of empty username
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/join", game_id))
+                    .uri(format!("/game/{}/join", game_id))
                     .header("content-type", "application/json")
                     .body(json!({}).to_string().to_string())
                     .unwrap(),
@@ -418,13 +418,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "player_3"); // default name because of empty username
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/join", game_id))
+                    .uri(format!("/game/{}/join", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -438,14 +438,14 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "test");
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let random_game_id = Uuid::new_v4();
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/join", random_game_id))
+                    .uri(format!("/game/{}/join", random_game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -466,7 +466,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .uri(format!("/game/{}/add_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -479,13 +479,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "bot_1");
-        assert_eq!(body.is_ai, true);
+        assert!(body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .uri(format!("/game/{}/add_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -498,13 +498,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "bot_2");
-        assert_eq!(body.is_ai, true);
+        assert!(body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .uri(format!("/game/{}/add_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -517,13 +517,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "bot_3");
-        assert_eq!(body.is_ai, true);
+        assert!(body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .uri(format!("/game/{}/add_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -536,13 +536,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "bot_4");
-        assert_eq!(body.is_ai, true);
+        assert!(body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .uri(format!("/game/{}/add_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -556,7 +556,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/add_bot", random_game_id))
+                    .uri(format!("/game/{}/add_bot", random_game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -586,7 +586,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/remove_bot", game_id))
+                    .uri(format!("/game/{}/remove_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -599,7 +599,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/remove_bot", game_id))
+                    .uri(format!("/game/{}/remove_bot", game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -613,7 +613,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/remove_bot", random_game_id))
+                    .uri(format!("/game/{}/remove_bot", random_game_id))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -633,7 +633,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", game_id))
+                    .uri(format!("/game/{}/play_again", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -647,13 +647,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "test");
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", game_id))
+                    .uri(format!("/game/{}/play_again", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "" }).to_string().to_string())
                     .unwrap(),
@@ -667,13 +667,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "player_2"); // default name because of empty username
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", game_id))
+                    .uri(format!("/game/{}/play_again", game_id))
                     .header("content-type", "application/json")
                     .body(json!({}).to_string().to_string())
                     .unwrap(),
@@ -687,13 +687,13 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "player_3"); // default name because of empty username
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", game_id))
+                    .uri(format!("/game/{}/play_again", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -707,14 +707,14 @@ mod tests {
         let body: Player = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name, "test");
-        assert_eq!(body.is_ai, false);
+        assert!(!body.is_ai);
 
         let random_game_id = Uuid::new_v4();
         let response = app(game_rooms.clone())
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", random_game_id))
+                    .uri(format!("/game/{}/play_again", random_game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
@@ -731,7 +731,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri(&format!("/game/{}/play_again", game_id))
+                    .uri(format!("/game/{}/play_again", game_id))
                     .header("content-type", "application/json")
                     .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),

@@ -20,6 +20,12 @@ pub struct Vec2 {
     pub y: f32,
 }
 
+impl Default for Ball {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Ball {
     pub fn new() -> Self {
         Self {

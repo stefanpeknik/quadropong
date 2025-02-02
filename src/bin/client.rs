@@ -79,11 +79,11 @@ async fn main() -> Result<(), ClientError> {
 
     let mut terminal = setup_terminal()?;
 
-    let app_running = (|| async {
+    let app_running = async {
         let mut app = App::new(&mut terminal, config)?;
         app.run().await?;
         Ok::<(), ClientError>(())
-    })()
+    }
     .await;
 
     restore_terminal(&mut terminal)?;

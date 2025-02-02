@@ -105,33 +105,34 @@ impl Update for CreateOrJoinLobby {
             };
             // match keys for the selected option
             match self.options[self.selected] {
-                Options::Create => match key_code {
-                    KeyCode::Enter => match self.tcp_client.create_game().await {
-                        // Game is created, but we need to join it to get our player id
-                        Ok(game) => match self
-                            .tcp_client
-                            .join_game(game.id, Some(self.config.player_name.clone()))
-                            .await
-                        {
-                            // We successfully joined the game
-                            Ok(our_player) => {
-                                info!("Moving from CreateOrJoinLobby to Lobby via create, game id: {:?}, our player id: {:?}", game.id, our_player.id);
-                                return Ok(Some(Box::new(Lobby::new(
-                                    game,
-                                    our_player.id,
-                                    self.config.clone(),
-                                )?)));
-                            }
+                Options::Create => {
+                    if key_code == KeyCode::Enter {
+                        match self.tcp_client.create_game().await {
+                            // Game is created, but we need to join it to get our player id
+                            Ok(game) => match self
+                                .tcp_client
+                                .join_game(game.id, Some(self.config.player_name.clone()))
+                                .await
+                            {
+                                // We successfully joined the game
+                                Ok(our_player) => {
+                                    info!("Moving from CreateOrJoinLobby to Lobby via create, game id: {:?}, our player id: {:?}", game.id, our_player.id);
+                                    return Ok(Some(Box::new(Lobby::new(
+                                        game,
+                                        our_player.id,
+                                        self.config.clone(),
+                                    )?)));
+                                }
+                                Err(e) => {
+                                    self.handle_net_error(e);
+                                }
+                            },
                             Err(e) => {
                                 self.handle_net_error(e);
                             }
-                        },
-                        Err(e) => {
-                            self.handle_net_error(e);
                         }
-                    },
-                    _ => {}
-                },
+                    }
+                }
                 Options::Join => match key_code {
                     KeyCode::Left
                     | KeyCode::Right
@@ -189,9 +190,9 @@ impl Render for CreateOrJoinLobby {
                 " Back".into(),
                 " <Esc> ".light_blue().bold(),
                 "| Up".into(),
-                " <\u{2191}> ".light_blue().into(),
+                " <\u{2191}> ".light_blue(),
                 "| Down".into(),
-                " <\u{2193}> ".light_blue().into(),
+                " <\u{2193}> ".light_blue(),
             ],
         );
 

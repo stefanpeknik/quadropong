@@ -8,6 +8,12 @@ pub struct GameRooms {
     pub lobbies: HashMap<Uuid, Game>,
 }
 
+impl Default for GameRooms {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameRooms {
     pub fn new() -> Self {
         Self {

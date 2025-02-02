@@ -6,6 +6,12 @@ pub struct Slider {
     pub selected: usize,
 }
 
+impl Default for Slider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Slider {
     pub fn new() -> Self {
         Self {

@@ -121,40 +121,37 @@ impl Update for Training {
                 }
                 _ => {
                     if let Ok(mut game) = self.game.lock() {
-                        match game
+                        if let Some(player) = game
                             .players
                             .values_mut()
                             .find(|p| p.id == self.our_player_id)
                         {
-                            Some(player) => {
-                                if let Some(position) = player.position {
-                                    match position {
-                                        PlayerPosition::Top | PlayerPosition::Bottom => {
-                                            match key_code {
-                                                KeyCode::Left => {
-                                                    player.move_paddle(Direction::Negative);
-                                                }
-                                                KeyCode::Right => {
-                                                    player.move_paddle(Direction::Positive);
-                                                }
-                                                _ => {}
+                            if let Some(position) = player.position {
+                                match position {
+                                    PlayerPosition::Top | PlayerPosition::Bottom => {
+                                        match key_code {
+                                            KeyCode::Left => {
+                                                player.move_paddle(Direction::Negative);
                                             }
+                                            KeyCode::Right => {
+                                                player.move_paddle(Direction::Positive);
+                                            }
+                                            _ => {}
                                         }
-                                        PlayerPosition::Left | PlayerPosition::Right => {
-                                            match key_code {
-                                                KeyCode::Up => {
-                                                    player.move_paddle(Direction::Negative);
-                                                }
-                                                KeyCode::Down => {
-                                                    player.move_paddle(Direction::Positive);
-                                                }
-                                                _ => {}
+                                    }
+                                    PlayerPosition::Left | PlayerPosition::Right => {
+                                        match key_code {
+                                            KeyCode::Up => {
+                                                player.move_paddle(Direction::Negative);
                                             }
+                                            KeyCode::Down => {
+                                                player.move_paddle(Direction::Positive);
+                                            }
+                                            _ => {}
                                         }
                                     }
                                 }
                             }
-                            None => {}
                         }
                     }
                 }

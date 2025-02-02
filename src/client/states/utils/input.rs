@@ -4,6 +4,12 @@ pub struct Input {
     pub char_index: usize,
 }
 
+impl Default for Input {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Input {
     pub fn new() -> Self {
         Self {
