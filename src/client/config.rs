@@ -34,11 +34,15 @@ impl Default for Config {
 }
 
 pub fn default_api_addr() -> String {
-    "http://127.0.0.1:3000".to_string()
+    option_env!("API_URL")
+        .unwrap_or_else(|| "http://127.0.0.1:3000")
+        .to_string()
 }
 
 pub fn default_socket_addr() -> String {
-    "127.0.0.1:34254".to_string()
+    option_env!("SOCKET_ADDR")
+        .unwrap_or_else(|| "127.0.0.1:34254")
+        .to_string()
 }
 
 impl Config {
