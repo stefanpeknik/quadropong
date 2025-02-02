@@ -1,71 +1,38 @@
-use crossterm::event::{EventStream, KeyEvent};
+use crossterm::event::{Event, EventStream, KeyEvent};
 use futures_util::TryStreamExt;
-use ratatui::{
-    backend::CrosstermBackend,
-    crossterm::{
-        event::{DisableMouseCapture, EnableMouseCapture, Event},
-        execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    },
-    Terminal,
-};
-use std::{
-    io::{self, Stderr},
-    sync::Arc,
-    thread::sleep,
-    time::Duration,
-};
+use ratatui::{prelude::Backend, Terminal};
+use std::{sync::Arc, thread::sleep, time::Duration};
 use tokio::{self, sync::Mutex, task, time::Instant};
 use tokio_util::sync::CancellationToken;
 
 use super::{
     config::Config,
+    error::ClientError,
     states::{menu::Menu, quit::Quit, traits::State},
 };
 
-fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stderr>>, io::Error> {
-    enable_raw_mode()?;
-    let mut stderr = io::stderr();
-    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-
-    let backend = CrosstermBackend::new(stderr);
-    let terminal = Terminal::new(backend)?;
-
-    Ok(terminal)
-}
-
-fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> Result<(), io::Error> {
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
-    Ok(())
-}
-
-pub struct App {
+pub struct App<'a, B: Backend> {
     current_state: Arc<Mutex<Box<dyn State>>>,
-    settings: Arc<Mutex<Config>>,
+    config: Arc<Mutex<Config>>,
     cancellation_token: CancellationToken,
+    terminal: &'a mut Terminal<B>,
 }
 
-impl App {
-    pub fn new(settings: Config) -> Self {
-        Self {
-            current_state: Arc::new(Mutex::new(Box::new(Menu::new(0, settings.clone())))),
-            settings: Arc::new(Mutex::new(settings)),
+impl<'a, B: Backend> App<'a, B> {
+    pub fn new(terminal: &'a mut Terminal<B>, config: Config) -> Result<Self, ClientError> {
+        Ok(Self {
+            current_state: Arc::new(Mutex::new(Box::new(Menu::new(0, config.clone())?))),
+            config: Arc::new(Mutex::new(config)),
             cancellation_token: CancellationToken::new(),
-        }
+            terminal,
+        })
     }
 
-    pub async fn run(&mut self) -> Result<(), io::Error> {
+    pub async fn run(&mut self) -> Result<(), ClientError> {
         // Clone the shared state and the running flag for the task that updates the state
         let update_state = Arc::clone(&self.current_state);
         let cancellation_token_clone = self.cancellation_token.clone();
-        let update_settings = Arc::clone(&self.settings);
+        let update_settings = Arc::clone(&self.config);
         let update_handle = task::spawn(async move {
             let mut reader = EventStream::new();
             let mut last_key_event_time = Instant::now();
@@ -125,8 +92,6 @@ impl App {
             Ok(())
         });
 
-        let mut terminal = setup_terminal()?;
-
         // Main render loop
         loop {
             // Check for cancellation
@@ -137,18 +102,16 @@ impl App {
             // Lock the state and render (release the lock as soon as possible)
             {
                 let current_state = self.current_state.lock().await;
-                terminal.draw(|f| current_state.render(f))?;
+                self.terminal.draw(|f| current_state.render(f))?;
             }
             {
-                let fps = self.settings.lock().await.fps;
+                let fps = self.config.lock().await.fps;
                 sleep(Duration::from_secs(1) / fps);
             }
         }
 
         // Wait for the update task to finish
         update_handle.await??;
-
-        restore_terminal(&mut terminal)?;
 
         Ok(())
     }

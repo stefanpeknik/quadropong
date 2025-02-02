@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::config;
+use crate::client::error::ClientError;
 use crate::client::net::tcp::TcpClient;
 use crate::client::net::udp::UdpClient;
 use crate::common::models::{ClientInput, ClientInputType, GameDto, GameState};
@@ -29,7 +30,7 @@ pub struct Lobby {
     game_id: Uuid,
     our_player_id: Uuid,
     cancellation_token: CancellationToken,
-    _receive_update_handle: JoinHandle<()>,
+    _receive_update_handle: JoinHandle<Result<(), ClientError>>,
     _ping_handle: JoinHandle<()>,
     udp_client: Arc<UdpClient>,
     tcp_client: Arc<TcpClient>,
@@ -38,9 +39,12 @@ pub struct Lobby {
 }
 
 impl Lobby {
-    pub fn new(game: Game, our_player_id: Uuid, config: config::Config) -> Self {
-        let udp_client =
-            Arc::new(UdpClient::new(&config.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
+    pub fn new(
+        game: Game,
+        our_player_id: Uuid,
+        config: config::Config,
+    ) -> Result<Self, ClientError> {
+        let udp_client = Arc::new(UdpClient::new(&config.socket_addr)?);
 
         let tcp_client = Arc::new(TcpClient::new(&config.api_url));
 
@@ -61,10 +65,7 @@ impl Lobby {
                 our_player_id.to_string(),
                 ClientInputType::JoinGame,
             );
-            udp_client_clone
-                .send_client_input(client_input)
-                .await
-                .expect("Failed to send introduction message"); // TODO: Handle this error
+            udp_client_clone.send_client_input(client_input).await?;
 
             loop {
                 tokio::select! {
@@ -88,6 +89,8 @@ impl Lobby {
                     }
                 }
             }
+
+            Ok(())
         });
 
         // Start a task to send ping messages
@@ -112,7 +115,7 @@ impl Lobby {
             }
         });
 
-        Self {
+        Ok(Self {
             game: game_dto,
             game_id,
             our_player_id,
@@ -123,7 +126,7 @@ impl Lobby {
             _ping_handle: ping_handle,
             config,
             disconnected,
-        }
+        })
     }
 }
 
@@ -140,7 +143,7 @@ impl Update for Lobby {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         // if game is started
         if let Ok(game) = self.game.lock() {
             if game.state == GameState::Active {
@@ -150,7 +153,7 @@ impl Update for Lobby {
                     self.our_player_id,
                     Arc::clone(&self.udp_client),
                     self.config.clone(),
-                ))));
+                )?)));
             }
         } else {
             error!("Failed to lock game");
@@ -178,10 +181,7 @@ impl Update for Lobby {
                         self.our_player_id.to_string(),
                         ClientInputType::PlayerReady,
                     );
-                    self.udp_client
-                        .send_client_input(client_input)
-                        .await
-                        .expect("Failed to send player ready message"); // TODO: Handle this error
+                    self.udp_client.send_client_input(client_input).await?;
                     info!("Toggle player ready");
                 }
                 KeyCode::Char('a') => match self.tcp_client.add_bot(self.game_id).await {
@@ -194,7 +194,7 @@ impl Update for Lobby {
                 },
                 KeyCode::Esc => {
                     info!("Moving from Lobby to CreateOrJoinLobby");
-                    return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
+                    return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone())?)));
                 }
                 _ => {}
             };

@@ -1,4 +1,5 @@
 use crate::client::config;
+use crate::client::error::ClientError;
 use crate::client::net::udp::UdpClient;
 use crate::client::states::menu::Menu;
 use crate::common::models::{ClientInput, ClientInputType, Direction, GameDto, GameState};
@@ -36,7 +37,7 @@ impl GameBoard {
         our_player_id: Uuid,
         udp_client: Arc<UdpClient>,
         config: config::Config,
-    ) -> Self {
+    ) -> Result<Self, ClientError> {
         // if for some reason the player position is not set, default to left
         let our_player_position = game
             .players
@@ -105,7 +106,7 @@ impl GameBoard {
             }
         });
 
-        Self {
+        Ok(Self {
             game,
             our_player_id,
             our_player_position,
@@ -115,7 +116,7 @@ impl GameBoard {
             udp_client,
             config,
             disconnected,
-        }
+        })
     }
 
     fn create_move_input(&self, direction: Direction) -> Option<ClientInput> {
@@ -145,7 +146,7 @@ impl Update for GameBoard {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         if let Ok(game) = self.game.lock() {
             if game.state == GameState::Finished {
                 info!("Game finished");
@@ -154,7 +155,7 @@ impl Update for GameBoard {
                     game.clone(),
                     self.our_player_id,
                     self.config.clone(),
-                ))));
+                )?)));
             }
         } else {
             error!("Failed to lock game");
@@ -167,7 +168,7 @@ impl Update for GameBoard {
                     } else {
                         info!("Moving from GameBoard to Menu due to user leaving");
                     }
-                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone())?)));
                 }
                 _ => match self.our_player_position {
                     PlayerPosition::Left | PlayerPosition::Right => match key_code {

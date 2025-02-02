@@ -4,7 +4,7 @@ use std::any::Any;
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 
-use crate::client::config;
+use crate::client::{config, error::ClientError};
 
 pub trait Render {
     fn render(&self, frame: &mut Frame);
@@ -15,7 +15,7 @@ pub trait Update {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error>;
+    ) -> Result<Option<Box<dyn State>>, ClientError>;
 }
 
 pub trait AsAny {

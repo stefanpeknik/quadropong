@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::client::config;
+use crate::client::error::ClientError;
 use crate::client::states::game_end::GameEnd;
 use crate::common::models::{Direction, GameDto, GameState};
 use crate::common::{Game, Player, PlayerPosition};
@@ -26,7 +27,7 @@ pub struct Training {
 }
 
 impl Training {
-    pub fn new(config: config::Config) -> Self {
+    pub fn new(config: config::Config) -> Result<Self, ClientError> {
         let mut game = Game::new();
         let mut our_player = Player::new(config.player_name.clone(), false);
         our_player.is_ready = true;
@@ -74,13 +75,13 @@ impl Training {
             }
         });
 
-        Self {
+        Ok(Self {
             config,
             game,
             our_player_id,
             cancellation_token,
             _game_tick_handle: game_tick_handle,
-        }
+        })
     }
 }
 
@@ -97,7 +98,7 @@ impl Update for Training {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         if let Ok(game) = self.game.lock() {
             if game.state == GameState::Finished {
                 info!("Game finished");
@@ -106,7 +107,7 @@ impl Update for Training {
                     GameDto::from(game.clone()),
                     self.our_player_id,
                     self.config.clone(),
-                ))));
+                )?)));
             }
         } else {
             error!("Failed to lock game");
@@ -116,7 +117,7 @@ impl Update for Training {
             match key_code {
                 KeyCode::Esc => {
                     log::info!("Moving from Training to Menu");
-                    return Ok(Some(Box::new(Menu::new(1, self.config.clone()))));
+                    return Ok(Some(Box::new(Menu::new(1, self.config.clone())?)));
                 }
                 _ => {
                     if let Ok(mut game) = self.game.lock() {

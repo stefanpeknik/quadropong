@@ -7,6 +7,7 @@ use super::traits::{HasConfig, Render, State, Update};
 use super::utils::input::Input;
 use super::utils::render::{into_title, render_inner_rectangle, render_outer_rectangle};
 use super::utils::widget::WidgetTrait;
+use crate::client::error::ClientError;
 
 use crossterm::event::KeyCode;
 use log::{error, info};
@@ -41,15 +42,15 @@ pub struct CreateOrJoinLobby {
 }
 
 impl CreateOrJoinLobby {
-    pub fn new(config: config::Config) -> Self {
-        Self {
+    pub fn new(config: config::Config) -> Result<Self, ClientError> {
+        Ok(Self {
             options: vec![Options::Create, Options::Join],
             selected: 0,
             join_lobby_input: Input::new(),
             error_message: None,
             tcp_client: TcpClient::new(&config.api_url),
             config,
-        }
+        })
     }
 
     fn next(&mut self) {
@@ -78,7 +79,7 @@ impl Update for CreateOrJoinLobby {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         if let Some(key_code) = key_code {
             // match navigation keys between options/states
             match key_code {
@@ -86,7 +87,7 @@ impl Update for CreateOrJoinLobby {
                 KeyCode::Down => self.next(),
                 KeyCode::Esc => {
                     info!("Moving from CreateOrJoinLobby to Menu");
-                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone())?)));
                 }
 
                 _ => {}
@@ -108,7 +109,7 @@ impl Update for CreateOrJoinLobby {
                                     game,
                                     our_player.id,
                                     self.config.clone(),
-                                ))));
+                                )?)));
                             }
                             Err(e) => {
                                 self.error_message = Some(e.to_string());
@@ -141,7 +142,7 @@ impl Update for CreateOrJoinLobby {
                                                 game,
                                                 our_player.id,
                                                 self.config.clone(),
-                                            ))));
+                                            )?)));
                                         }
                                         Err(e) => {
                                             info!("Error joining game: {}", e);

@@ -9,6 +9,7 @@ use ratatui::{
 };
 use uuid::Uuid;
 
+use crate::client::error::ClientError;
 use crate::{
     client::{config, net::tcp::TcpClient, states::lobby::Lobby},
     common::models::{GameDto, PlayerDto},
@@ -29,14 +30,18 @@ pub struct GameEnd {
 }
 
 impl GameEnd {
-    pub fn new(game: GameDto, our_player_id: Uuid, config: config::Config) -> Self {
-        Self {
+    pub fn new(
+        game: GameDto,
+        our_player_id: Uuid,
+        config: config::Config,
+    ) -> Result<Self, ClientError> {
+        Ok(Self {
             game,
             our_player_id,
             tcp_client: TcpClient::new(&config.api_url),
             config,
             error_message: None,
-        }
+        })
     }
 }
 
@@ -53,12 +58,12 @@ impl Update for GameEnd {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Esc => {
                     log::info!("Moving from GameEnd to Menu");
-                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone())?)));
                 }
                 KeyCode::Enter => {
                     log::info!("Player wants to play again");
@@ -76,7 +81,7 @@ impl Update for GameEnd {
                                         game.into(),
                                         player.id,
                                         self.config.clone(),
-                                    ))));
+                                    )?)));
                                 }
                                 Err(e) => {
                                     log::error!(

@@ -8,6 +8,7 @@ use super::utils::input::Input;
 use super::utils::render::{into_title, render_outer_rectangle, render_settings};
 use super::utils::slider::Slider;
 use super::utils::widget::{Widget, WidgetTrait};
+use crate::client::error::ClientError;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
@@ -41,13 +42,13 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new(config: config::Config) -> Self {
+    pub fn new(config: config::Config) -> Result<Self, ClientError> {
         let options = Self::fill_settings(config.clone());
-        Self {
+        Ok(Self {
             options,
             selected: 0,
             config: Mutex::new(config),
-        }
+        })
     }
 
     fn fill_settings(settings: config::Config) -> Vec<Options> {
@@ -119,7 +120,7 @@ impl Update for Settings {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         let active_widget = self.get_widget_active_as_mut();
 
         if let Some(key_code) = key_code {
@@ -152,7 +153,7 @@ impl Update for Settings {
                         let _ = settings.save_config();
                         info!("Config saved");
                         info!("Moving from Settings to Menu");
-                        return Ok(Some(Box::new(Menu::new(2, settings.clone()))));
+                        return Ok(Some(Box::new(Menu::new(2, settings.clone())?)));
                     }
                 }
                 KeyCode::End => {

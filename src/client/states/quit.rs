@@ -1,6 +1,7 @@
 use crate::client::config;
 
 use super::traits::{HasConfig, Render, State, Update};
+use crate::client::error::ClientError;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
@@ -12,8 +13,8 @@ pub struct Quit {
 }
 
 impl Quit {
-    pub fn new(config: config::Config) -> Self {
-        Self { config }
+    pub fn new(config: config::Config) -> Result<Self, ClientError> {
+        Ok(Self { config })
     }
 }
 
@@ -30,7 +31,7 @@ impl Update for Quit {
     async fn update(
         &mut self,
         _key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         info!("Quitting the game");
         Ok(None)
     }

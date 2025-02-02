@@ -7,6 +7,7 @@ use super::utils::render::{
     into_title, render_inner_rectangle, render_list, render_outer_rectangle,
 };
 use crate::client::config;
+use crate::client::error::ClientError;
 
 use axum::async_trait;
 use crossterm::event::KeyCode;
@@ -37,12 +38,12 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new(selected: usize, config: config::Config) -> Self {
-        Self {
+    pub fn new(selected: usize, config: config::Config) -> Result<Self, ClientError> {
+        Ok(Self {
             options: vec![Options::Online, Options::Training, Options::Settings],
             selected,
             config,
-        }
+        })
     }
 
     fn next(&mut self) {
@@ -71,7 +72,7 @@ impl Update for Menu {
     async fn update(
         &mut self,
         key_code: Option<KeyCode>,
-    ) -> Result<Option<Box<dyn State>>, std::io::Error> {
+    ) -> Result<Option<Box<dyn State>>, ClientError> {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Up => self.previous(),
@@ -79,20 +80,20 @@ impl Update for Menu {
                 KeyCode::Enter => match self.options[self.selected] {
                     Options::Online => {
                         info!("Moving from Menu to CreateOrJoinLobby");
-                        return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone()))));
+                        return Ok(Some(Box::new(CreateOrJoinLobby::new(self.config.clone())?)));
                     }
                     Options::Training => {
                         info!("Moving from Menu to Training");
-                        return Ok(Some(Box::new(Training::new(self.config.clone()))));
+                        return Ok(Some(Box::new(Training::new(self.config.clone())?)));
                     }
                     Options::Settings => {
                         info!("Moving from Menu to Settings");
-                        return Ok(Some(Box::new(Settings::new(self.config.clone()))));
+                        return Ok(Some(Box::new(Settings::new(self.config.clone())?)));
                     }
                 },
                 KeyCode::Char('q') => {
                     info!("Moving from Menu to Quit");
-                    return Ok(Some(Box::new(Quit::new(self.config.clone()))));
+                    return Ok(Some(Box::new(Quit::new(self.config.clone())?)));
                 }
                 _ => {}
             };
