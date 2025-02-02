@@ -174,6 +174,44 @@ impl TcpClient {
 
         Ok(())
     }
+
+    pub async fn play_again(
+        &self,
+        game_id: Uuid,
+        username: Option<String>,
+    ) -> Result<Player, TcpError> {
+        let url = format!("{}/game/{}/play_again", self.server_addr, game_id);
+        let payload_json = serde_json::to_string(&JoinGameRequest { username })?;
+
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .body(payload_json)
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
+
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
+
+        // Read the response body and handle potential errors
+        let response_text = response
+            .text()
+            .await
+            .map_err(TcpError::FailedToReadResponse)?;
+
+        // Deserialize the response and handle potential errors
+        let player: Player = serde_json::from_str(&response_text)?;
+
+        Ok(player)
+    }
 }
 #[cfg(test)]
 mod tests {

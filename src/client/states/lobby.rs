@@ -248,7 +248,7 @@ impl Render for Lobby {
                 "<Enter> ".light_blue().bold(),
                 "| Add bot ".into(),
                 "<A> ".light_cyan().bold(),
-                "| Remove bot ".into(),
+                "| Delete bot ".into(),
                 "<D> ".light_cyan().bold(),
             ],
         );

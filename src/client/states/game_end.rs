@@ -10,7 +10,7 @@ use ratatui::{
 use uuid::Uuid;
 
 use crate::{
-    client::config,
+    client::{config, net::tcp::TcpClient, states::lobby::Lobby},
     common::models::{GameDto, PlayerDto},
 };
 
@@ -24,6 +24,8 @@ pub struct GameEnd {
     game: GameDto,
     our_player_id: Uuid,
     config: config::Config,
+    tcp_client: TcpClient,
+    error_message: Option<String>,
 }
 
 impl GameEnd {
@@ -31,7 +33,9 @@ impl GameEnd {
         Self {
             game,
             our_player_id,
+            tcp_client: TcpClient::new(&config.api_url),
             config,
+            error_message: None,
         }
     }
 }
@@ -55,6 +59,41 @@ impl Update for GameEnd {
                 KeyCode::Enter => {
                     log::info!("Moving from GameEnd to Menu");
                     return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
+                }
+                KeyCode::Char('p') => {
+                    log::info!("Player wants to play again");
+                    match self
+                        .tcp_client
+                        .play_again(self.game.id, Some(self.config.player_name.clone()))
+                        .await
+                    {
+                        Ok(player) => {
+                            log::info!("Play again request sent");
+                            match self.tcp_client.get_game(self.game.id).await {
+                                Ok(game) => {
+                                    log::info!("Game received");
+                                    return Ok(Some(Box::new(Lobby::new(
+                                        game.into(),
+                                        player.id,
+                                        self.config.clone(),
+                                    ))));
+                                }
+                                Err(e) => {
+                                    log::error!(
+                                        "Failed to get game after play again request: {}",
+                                        e
+                                    );
+                                    self.error_message =
+                                        Some("Failed to get game after play again request".into());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // TODO: Handle error
+                            log::error!("Failed to send play again request: {}", e);
+                            self.error_message = Some("Failed to send play again request".into());
+                        }
+                    }
                 }
                 _ => {}
             };
