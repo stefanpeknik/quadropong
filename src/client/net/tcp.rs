@@ -27,6 +27,7 @@ impl TcpClient {
         let response = self
             .client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;
@@ -58,6 +59,7 @@ impl TcpClient {
         let response = self
             .client
             .get(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;
@@ -94,6 +96,7 @@ impl TcpClient {
         let response = self
             .client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .header("Content-Type", "application/json")
             .body(payload_json)
             .send()
@@ -128,6 +131,7 @@ impl TcpClient {
         let response = self
             .client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;
@@ -160,6 +164,7 @@ impl TcpClient {
         let response = self
             .client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .map_err(TcpError::FailedToSendRequest)?;
@@ -187,6 +192,7 @@ impl TcpClient {
         let response = self
             .client
             .post(&url)
+            .timeout(std::time::Duration::from_secs(5))
             .header("Content-Type", "application/json")
             .body(payload_json)
             .send()
