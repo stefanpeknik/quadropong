@@ -56,11 +56,11 @@ impl Update for GameEnd {
     ) -> Result<Option<Box<dyn State>>, std::io::Error> {
         if let Some(key_code) = key_code {
             match key_code {
-                KeyCode::Enter => {
+                KeyCode::Esc => {
                     log::info!("Moving from GameEnd to Menu");
                     return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Enter => {
                     log::info!("Player wants to play again");
                     match self
                         .tcp_client
@@ -106,7 +106,12 @@ impl Render for GameEnd {
         let outer_rect = render_outer_rectangle(
             frame,
             " quadropong - Game End ",
-            vec![" Return to main menu ".into(), "<Enter> ".light_blue()],
+            vec![
+                " Return menu ".into(),
+                "<Esc> ".light_blue(),
+                "| Play again ".into(),
+                "<Enter> ".light_blue(),
+            ],
         );
 
         let inner = outer_rect.inner(Margin {
