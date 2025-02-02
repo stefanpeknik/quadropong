@@ -110,7 +110,7 @@ impl State for Settings {}
 
 impl HasConfig for Settings {
     fn config(&self) -> config::Config {
-        self.config.lock().unwrap().clone() // TODO: Check if this is correct
+        self.config.lock().expect("Failed to lock settings").clone()
     }
 }
 

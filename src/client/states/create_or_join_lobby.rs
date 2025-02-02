@@ -5,9 +5,7 @@ use super::lobby::Lobby;
 use super::menu::Menu;
 use super::traits::{HasConfig, Render, State, Update};
 use super::utils::input::Input;
-use super::utils::render::{
-    into_title, render_inner_rectangle, render_outer_rectangle,
-};
+use super::utils::render::{into_title, render_inner_rectangle, render_outer_rectangle};
 use super::utils::widget::WidgetTrait;
 
 use crossterm::event::KeyCode;
@@ -234,7 +232,7 @@ impl Render for CreateOrJoinLobby {
         let mut style = Style::default();
         if self.options[self.selected] == Options::Join {
             frame.set_cursor_position(Position::new(
-                inner_join_input_area.x + self.join_lobby_input.char_index as u16, // TODO the `as` seems sus here
+                inner_join_input_area.x + self.join_lobby_input.char_index.try_into().unwrap_or(0),
                 inner_join_input_area.y,
             ));
             style = Style::default().bold();

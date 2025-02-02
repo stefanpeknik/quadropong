@@ -60,7 +60,6 @@ impl Training {
                     _ = tokio::time::sleep(tokio::time::Duration::from_millis(1000 / 60)) => {
                         if let Ok(mut g) = game_clone.lock() {
                             g.game_tick();
-                            // TODO ai should be eventually handled in the game tick logic
                             let ball = g.ball.clone();
                             for player in g.players.values_mut() {
                                 if player.is_ai {

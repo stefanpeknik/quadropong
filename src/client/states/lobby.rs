@@ -24,21 +24,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-pub enum Options {
-    TODO,
-}
-
-impl std::fmt::Display for Options {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Options::TODO => write!(f, "TODO"),
-        }
-    }
-}
-
 pub struct Lobby {
-    options: Vec<Options>,
-    selected: usize,
     game: Arc<Mutex<GameDto>>,
     game_id: Uuid,
     our_player_id: Uuid,
@@ -56,7 +42,7 @@ impl Lobby {
         let udp_client =
             Arc::new(UdpClient::new(&config.socket_addr).expect("Failed to create UDP client")); // TODO: Handle this error
 
-        let tcp_client = Arc::new(TcpClient::new(&config.api_url)); // TODO: same as above
+        let tcp_client = Arc::new(TcpClient::new(&config.api_url));
 
         let cancellation_token = CancellationToken::new();
         let game_id = game.id;
@@ -127,8 +113,6 @@ impl Lobby {
         });
 
         Self {
-            options: vec![Options::TODO],
-            selected: 0,
             game: game_dto,
             game_id,
             our_player_id,
@@ -139,18 +123,6 @@ impl Lobby {
             _ping_handle: ping_handle,
             config,
             disconnected,
-        }
-    }
-
-    fn next(&mut self) {
-        self.selected = (self.selected + 1) % self.options.len();
-    }
-
-    fn previous(&mut self) {
-        if self.selected == 0 {
-            self.selected = self.options.len() - 1;
-        } else {
-            self.selected -= 1;
         }
     }
 }
@@ -189,34 +161,29 @@ impl Update for Lobby {
                 KeyCode::Tab => {
                     // copy game id to clipboard
                     if let Ok(mut clipboard) = Clipboard::new() {
-                        if let Ok(_clipboard_content) = clipboard.set_text(self.game_id.to_string())
+                        if let Err(_clipboard_content) =
+                            clipboard.set_text(self.game_id.to_string())
                         {
-                            // TODO
-                        } else {
                             error!("Failed to set clipboard content");
                         }
                     } else {
                         error!("Failed to create clipboard");
                     }
                 }
-                KeyCode::Up => self.previous(),
-                KeyCode::Down => self.next(),
-                KeyCode::Enter => match self.options[self.selected] {
-                    // TODO: Implement this
-                    _ => {
-                        // send player ready
-                        let client_input = ClientInput::new(
-                            self.game_id.to_string(),
-                            self.our_player_id.to_string(),
-                            ClientInputType::PlayerReady,
-                        );
-                        self.udp_client
-                            .send_client_input(client_input)
-                            .await
-                            .expect("Failed to send player ready message"); // TODO: Handle this error
-                        info!("Toggle player ready");
-                    }
-                },
+
+                KeyCode::Enter => {
+                    // send player ready
+                    let client_input = ClientInput::new(
+                        self.game_id.to_string(),
+                        self.our_player_id.to_string(),
+                        ClientInputType::PlayerReady,
+                    );
+                    self.udp_client
+                        .send_client_input(client_input)
+                        .await
+                        .expect("Failed to send player ready message"); // TODO: Handle this error
+                    info!("Toggle player ready");
+                }
                 KeyCode::Char('a') => match self.tcp_client.add_bot(self.game_id).await {
                     Err(e) => info!("Add bot failed: {}", e),
                     Ok(_) => info!("Add bot called"),

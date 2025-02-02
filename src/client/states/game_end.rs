@@ -89,7 +89,6 @@ impl Update for GameEnd {
                             }
                         }
                         Err(e) => {
-                            // TODO: Handle error
                             log::error!("Failed to send play again request: {}", e);
                             self.error_message = Some("Failed to send play again request".into());
                         }

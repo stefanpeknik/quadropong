@@ -37,11 +37,12 @@ impl GameBoard {
         udp_client: Arc<UdpClient>,
         config: config::Config,
     ) -> Self {
+        // if for some reason the player position is not set, default to left
         let our_player_position = game
             .players
             .get(&our_player_id)
-            .map(|player| player.position.unwrap_or(PlayerPosition::Left)) // TODO: Handle this error better
-            .unwrap_or(PlayerPosition::Left); // TODO: Handle this error better
+            .map(|player| player.position.unwrap_or(PlayerPosition::Left))
+            .unwrap_or(PlayerPosition::Left);
         let game = Arc::new(Mutex::new(game));
         let cancellation_token = CancellationToken::new();
         let disconnected = Arc::new(AtomicBool::new(false));
@@ -161,24 +162,12 @@ impl Update for GameBoard {
         if let Some(key_code) = key_code {
             match key_code {
                 KeyCode::Esc => {
-                    // TODO: just a placeholder for now
-                    match self.disconnected.load(Ordering::Relaxed) {
-                        false => {
-                            if let Ok(game) = self.game.lock() {
-                                return Ok(Some(Box::new(GameEnd::new(
-                                    game.clone(),
-                                    self.our_player_id,
-                                    self.config.clone(),
-                                ))));
-                            } else {
-                                error!("Failed to lock game at Esc");
-                            }
-                        }
-                        true => {
-                            info!("Moving from Lobby to CreateOrJoinLobby");
-                            return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
-                        }
+                    if self.disconnected.load(Ordering::Relaxed) {
+                        info!("Moving from Lobby to CreateOrJoinLobby due to disconnection");
+                    } else {
+                        info!("Moving from GameBoard to Menu due to user leaving");
                     }
+                    return Ok(Some(Box::new(Menu::new(0, self.config.clone()))));
                 }
                 _ => match self.our_player_position {
                     PlayerPosition::Left | PlayerPosition::Right => match key_code {
