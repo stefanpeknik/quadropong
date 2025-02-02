@@ -30,3 +30,39 @@ impl GameRooms {
         self.lobbies.get(&id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_game() {
+        let mut game_rooms = GameRooms::new();
+
+        let game_id = game_rooms.create_game();
+
+        assert!(game_rooms.lobbies.contains_key(&game_id));
+    }
+
+    #[test]
+    fn test_find_lobby_mut() {
+        let mut game_rooms = GameRooms::new();
+
+        let game_id = game_rooms.create_game();
+
+        let game = game_rooms.find_lobby_mut(game_id);
+
+        assert!(game.is_some());
+    }
+
+    #[test]
+    fn test_find_lobby() {
+        let mut game_rooms = GameRooms::new();
+
+        let game_id = game_rooms.create_game();
+
+        let game = game_rooms.find_lobby(game_id);
+
+        assert!(game.is_some());
+    }
+}

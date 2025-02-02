@@ -6,7 +6,7 @@ use super::PlayerPosition;
 
 const GAME_SIZE: f32 = 10.0;
 
-#[derive(Serialize, Clone, Debug, Deserialize)]
+#[derive(Serialize, Clone, Debug, Deserialize, PartialEq)]
 pub struct Ball {
     pub position: Vec2, // Current position (x, y)
     pub velocity: Vec2, // Current velocity vector
@@ -14,7 +14,7 @@ pub struct Ball {
     pub last_touched_by: Option<Uuid>,
 }
 
-#[derive(Serialize, Clone, Debug, Deserialize)]
+#[derive(Serialize, Clone, Debug, Deserialize, PartialEq)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,

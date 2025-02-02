@@ -7,7 +7,7 @@ use crate::common::{models::GameState, Game};
 
 use super::{BallDto, PlayerDto};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GameDto {
     pub id: Uuid,
     pub state: GameState,

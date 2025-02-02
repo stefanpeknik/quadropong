@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug, Deserialize)]
+#[derive(Serialize, Debug, Deserialize, PartialEq, Clone)]
 pub enum ClientInputType {
     JoinGame,
     PauseGame,
@@ -13,13 +13,13 @@ pub enum ClientInputType {
     Ping,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum Direction {
     Positive,
     Negative,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientInput {
     pub game_id: String,
     pub player_id: String,
