@@ -248,6 +248,8 @@ impl Render for Lobby {
                 "<Enter> ".light_blue().bold(),
                 "| Add bot ".into(),
                 "<A> ".light_cyan().bold(),
+                "| Remove bot ".into(),
+                "<D> ".light_cyan().bold(),
             ],
         );
         let inner_rect = outer_rect.inner(Margin {
@@ -255,10 +257,7 @@ impl Render for Lobby {
             vertical: 1,
         });
 
-        let layout = Layout::vertical(vec![
-            Constraint::Length(3),
-            Constraint::Fill(1),
-        ]);
+        let layout = Layout::vertical(vec![Constraint::Length(3), Constraint::Fill(1)]);
         let [lobby_id_area, lobby_area] = layout.areas(inner_rect);
 
         if let Ok(game) = self.game.lock() {
