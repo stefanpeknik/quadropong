@@ -168,6 +168,28 @@ pub async fn restart_game(
         .map(|_| Json(player_copy))
 }
 
+pub async fn remove_bot(
+    State(app_state): State<Arc<Mutex<GameRooms>>>,
+    Path(game_id): Path<String>,
+) -> Result<(), StatusCode> {
+    let game_uuid = Uuid::parse_str(&game_id).map_err(|_e| StatusCode::BAD_REQUEST)?;
+
+    let mut game_rooms = app_state.lock().await;
+
+    let game = game_rooms
+        .lobbies
+        .get_mut(&game_uuid)
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    if let Some(bot) = game.players.values().find(|p| p.is_ai) {
+        game.remove_player(bot.id);
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    return Ok(());
+}
+
 // Build the Axum app with routes
 pub fn app(game_rooms: Arc<Mutex<GameRooms>>) -> Router {
     Router::new()
@@ -177,6 +199,7 @@ pub fn app(game_rooms: Arc<Mutex<GameRooms>>) -> Router {
         .route("/game/:id/join", post(join_game)) // join a game
         .route("/game/:id/add_bot", post(add_bot)) // add a bot to a game
         .route("/game/:id/play_again", post(restart_game)) // add a bot to a game
+        .route("/game/:id/remove_bot", post(remove_bot)) // remove a bot from a game
         .with_state(game_rooms)
 }
 
@@ -525,6 +548,182 @@ mod tests {
                     .method("POST")
                     .uri(&format!("/game/{}/add_bot", random_game_id))
                     .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_remove_bot() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let game_id = game_rooms.lock().await.create_game();
+
+        let bot = Player::new("bot".to_string(), true);
+        game_rooms
+            .lock()
+            .await
+            .lobbies
+            .get_mut(&game_id)
+            .unwrap()
+            .add_player(bot)
+            .unwrap();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/remove_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/remove_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let random_game_id = Uuid::new_v4();
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/remove_bot", random_game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_restart_game() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let game_id = game_rooms.lock().await.create_game();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "test");
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "player_2"); // default name because of empty username
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({}).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "player_3"); // default name because of empty username
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "test");
+        assert_eq!(body.is_ai, false);
+
+        let random_game_id = Uuid::new_v4();
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", random_game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let _game = game_rooms.lock().await.lobbies.get(&game_id).unwrap();
+        game_rooms.lock().await.lobbies.remove(&game_id);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/play_again", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
                     .unwrap(),
             )
             .await

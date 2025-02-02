@@ -151,6 +151,29 @@ impl TcpClient {
 
         Ok(player)
     }
+
+    pub async fn remove_bot(&self, game_id: Uuid) -> Result<(), TcpError> {
+        let url = format!("{}/game/{}/remove_bot", self.server_addr, game_id);
+        info!("Sending request to {}", url);
+
+        // Send the request and handle potential errors
+        let response = self
+            .client
+            .post(&url)
+            .send()
+            .await
+            .map_err(TcpError::FailedToSendRequest)?;
+
+        // Check if the response status is successful
+        if !response.status().is_success() {
+            return Err(TcpError::ServerError(format!(
+                "Server returned status code: {}",
+                response.status()
+            )));
+        }
+
+        Ok(())
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -409,6 +432,40 @@ mod tests {
 
         let client = TcpClient::new(&server.url());
         let result = client.add_bot(game_id).await;
+
+        mock.assert();
+        assert!(matches!(result, Err(TcpError::ServerError(_))));
+    }
+
+    #[tokio::test]
+    async fn test_remove_bot_success() {
+        let mut server = Server::new_async().await;
+        let game_id = Uuid::new_v4();
+        let mock = server
+            .mock("POST", format!("/game/{}/remove_bot", game_id).as_str())
+            .with_status(200)
+            .create_async()
+            .await;
+
+        let client = TcpClient::new(&server.url());
+        let result = client.remove_bot(game_id).await;
+
+        mock.assert();
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_remove_bot_failure() {
+        let mut server = Server::new_async().await;
+        let game_id = Uuid::new_v4();
+        let mock = server
+            .mock("POST", format!("/game/{}/remove_bot", game_id).as_str())
+            .with_status(400)
+            .create_async()
+            .await;
+
+        let client = TcpClient::new(&server.url());
+        let result = client.remove_bot(game_id).await;
 
         mock.assert();
         assert!(matches!(result, Err(TcpError::ServerError(_))));
