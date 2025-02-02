@@ -146,6 +146,8 @@ pub async fn restart_game(
 
     if game.state == GameState::Finished {
         game.set_game_state(GameState::WaitingForPlayers);
+        game.started_at = None;
+        game.finished_at = None;
         game.players.clear();
     }
 
