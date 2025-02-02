@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::common::{Game, GameRooms, JoinGameRequest, Player};
+use crate::common::{models::GameState, Game, GameRooms, JoinGameRequest, Player};
 
 pub async fn join_game(
     State(app_state): State<Arc<Mutex<GameRooms>>>,
@@ -124,6 +124,50 @@ pub async fn add_bot(
         .map(|_| Json(player_copy))
 }
 
+pub async fn restart_game(
+    State(app_state): State<Arc<Mutex<GameRooms>>>,
+    Path(game_id): Path<String>,
+    Json(payload): Json<JoinGameRequest>,
+) -> Result<Json<Player>, StatusCode> {
+    let game_uuid = Uuid::parse_str(&game_id).map_err(|_e| StatusCode::BAD_REQUEST)?;
+
+    let mut game_rooms = app_state.lock().await;
+
+    let game = game_rooms.lobbies.get_mut(&game_uuid);
+
+    let game = match game {
+        Some(game) => game,
+        None => return Err(StatusCode::NOT_FOUND),
+    };
+
+    if game.state == GameState::Finished {
+        game.set_game_state(GameState::WaitingForPlayers);
+        game.players.clear();
+    }
+
+    let player_name = match payload.username {
+        Some(name) if !name.is_empty() => name,
+        _ => {
+            let player_number = game.players.len() + 1;
+            format!("player_{}", player_number)
+        }
+    };
+
+    let player_positions = game.assign_position();
+
+    let mut player = Player::new(player_name, false);
+
+    if let Some(position) = player_positions {
+        player.position = Some(position);
+    }
+
+    let player_copy = player.clone();
+
+    game.add_player(player)
+        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)
+        .map(|_| Json(player_copy))
+}
+
 // Build the Axum app with routes
 pub fn app(game_rooms: Arc<Mutex<GameRooms>>) -> Router {
     Router::new()
@@ -132,6 +176,7 @@ pub fn app(game_rooms: Arc<Mutex<GameRooms>>) -> Router {
         .route("/game", post(create_game)) // create a new game
         .route("/game/:id/join", post(join_game)) // join a game
         .route("/game/:id/add_bot", post(add_bot)) // add a bot to a game
+        .route("/game/:id/play_again", post(restart_game)) // add a bot to a game
         .with_state(game_rooms)
 }
 
