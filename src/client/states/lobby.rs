@@ -234,18 +234,23 @@ impl Render for Lobby {
                 .iter()
                 .map(|(p_id, p)| {
                     if *p_id == self.our_player_id {
-                        (format!("{} (You)", p.name), p.joined_at, p.is_ready)
+                        (
+                            format!("{} (You)", p.name),
+                            p.joined_at,
+                            p.is_ready,
+                            p.position,
+                        )
                     } else {
-                        (p.name.clone(), p.joined_at, p.is_ready)
+                        (p.name.clone(), p.joined_at, p.is_ready, p.position)
                     }
                 })
                 .collect();
-            players_info.sort_by(|(_, p1_joined_at, _), (_, p2_joined_at, _)| {
+            players_info.sort_by(|(_, p1_joined_at, _, _), (_, p2_joined_at, _, _)| {
                 p1_joined_at.cmp(p2_joined_at)
             });
             let players: Vec<_> = players_info
                 .into_iter()
-                .map(|(players, _, is_ready)| (players, is_ready))
+                .map(|(players, _, is_ready, position)| (players, is_ready, position))
                 .collect();
             list.extend(players);
 

@@ -24,6 +24,7 @@ pub fn into_title(input: &str) -> String {
         .join(" ")
 }
 
+/// Render disconnect popup
 pub fn render_disconnect_popup(frame: &mut Frame, area: Rect) {
     let [popup_area] = Layout::horizontal(vec![Constraint::Percentage(50)])
         .flex(Flex::Center)
@@ -122,16 +123,23 @@ pub fn render_list(frame: &mut Frame, items: &[String], selected_index: usize, r
 }
 
 /// Renders a list of players
-pub fn render_player_list(frame: &mut Frame, items: &Vec<(String, bool)>, rect: Rect) {
+pub fn render_player_list(
+    frame: &mut Frame,
+    items: &Vec<(String, bool, Option<PlayerPosition>)>,
+    rect: Rect,
+) {
     let layout = Layout::vertical(std::iter::repeat(Constraint::Length(1)).take(4))
         .flex(Flex::SpaceAround)
         .split(rect);
 
-    for ((text, is_ready), area) in items.iter().zip(layout.iter()) {
-        let [text_area, ready_area] =
-            Layout::horizontal(vec![Constraint::Fill(1), Constraint::Length(1)])
-                .flex(Flex::End)
-                .areas(*area);
+    for ((text, is_ready, position), area) in items.iter().zip(layout.iter()) {
+        let [position_area, text_area, ready_area] = Layout::horizontal(vec![
+            Constraint::Length(6),
+            Constraint::Percentage(50),
+            Constraint::Length(1),
+        ])
+        .flex(Flex::SpaceAround)
+        .areas(*area);
 
         let ready_symbol = if *is_ready { "✓".green() } else { "X".red() };
 
@@ -139,8 +147,14 @@ pub fn render_player_list(frame: &mut Frame, items: &Vec<(String, bool)>, rect: 
             Paragraph::new(Line::from(text.clone())).centered(),
             text_area,
         );
+        if let Some(position) = position {
+            frame.render_widget(
+                Paragraph::new(Line::from(format!("{}", position))).centered(),
+                position_area,
+            );
+        }
         frame.render_widget(
-            Paragraph::new(Line::from(ready_symbol).right_aligned()),
+            Paragraph::new(Line::from(ready_symbol).centered()),
             ready_area,
         );
     }

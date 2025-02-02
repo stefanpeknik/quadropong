@@ -14,6 +14,18 @@ pub enum PlayerPosition {
     Right,
 }
 
+impl std::fmt::Display for PlayerPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let position = match self {
+            PlayerPosition::Top => "Top",
+            PlayerPosition::Bottom => "Bottom",
+            PlayerPosition::Left => "Left",
+            PlayerPosition::Right => "Right",
+        };
+        write!(f, "{}", position)
+    }
+}
+
 #[derive(Serialize, Clone, Deserialize, PartialEq, Debug)]
 pub struct Player {
     pub id: Uuid,
