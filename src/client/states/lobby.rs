@@ -209,9 +209,13 @@ impl Update for Lobby {
                         info!("Toggle player ready");
                     }
                 },
-                KeyCode::Char('b') => match self.tcp_client.add_bot(self.game_id).await {
+                KeyCode::Char('a') => match self.tcp_client.add_bot(self.game_id).await {
                     Err(e) => info!("Add bot failed: {}", e),
                     Ok(_) => info!("Add bot called"),
+                },
+                KeyCode::Char('d') => match self.tcp_client.remove_bot(self.game_id).await {
+                    Err(e) => info!("Remove bot failed: {}", e),
+                    Ok(_) => info!("Remove bot called"),
                 },
                 KeyCode::Esc => {
                     info!("Moving from Lobby to CreateOrJoinLobby");
@@ -235,7 +239,7 @@ impl Render for Lobby {
                 "| Ready ".into(),
                 "<Enter> ".light_blue().bold(),
                 "| Add bot ".into(),
-                "<B> ".light_cyan().bold(),
+                "<A> ".light_cyan().bold(),
             ],
         );
         let inner_rect = outer_rect.inner(Margin {

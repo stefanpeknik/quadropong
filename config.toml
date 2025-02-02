@@ -1,3 +1,0 @@
-[env]
-API_URL='http://mokris.fit:3000'
-SOCKET_ADDR='128.140.85.67:34254'

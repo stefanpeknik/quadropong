@@ -10,8 +10,10 @@ use super::states::{
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(skip_serializing, skip_deserializing)]
     #[serde(default = "default_api_addr")]
     pub api_url: String,
+    #[serde(skip_serializing, skip_deserializing)]
     #[serde(default = "default_socket_addr")]
     pub socket_addr: String,
     pub player_name: String,

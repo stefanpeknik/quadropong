@@ -38,15 +38,12 @@ Quadropong is a Rust-based game project. This README provides instructions on ho
 
 ### Environment variables
 
-Optionally, it could be useful to change the API URL and/or the socket address.
-That can be done by creating a file [`config.toml`](https://doc.rust-lang.org/cargo/reference/config.html)
-in project's root directory and specifying those environment variables,
-otherwise they default to localhost addresses:
+Optionally, it could be useful to change the API URL and/or the socket address
+(if not set, those values default to hardcoded localhost values used by the server):
 
-```conf
-[env]
-API_URL='...'       # REST API address for client to communicate with the server
-SOCKET_ADDR='...'   # UDP socket address that server listens on for client updates 
+```sh
+export API_URL='...'       # REST API address for client to communicate with the server
+export SOCKET_ADDR='...'   # UDP socket address that server listens on for client updates 
 ```
 
 ## Testing
