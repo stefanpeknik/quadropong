@@ -1,4 +1,5 @@
 use crate::client::config;
+use crate::client::net::error::TcpError;
 use crate::client::net::tcp::TcpClient;
 
 use super::lobby::Lobby;
@@ -64,6 +65,16 @@ impl CreateOrJoinLobby {
             self.selected -= 1;
         }
     }
+
+    fn handle_net_error(&mut self, e: TcpError) {
+        error!("Error joining game: {}", e);
+        let hide_bg_issues_msg =
+            "There was an issue joining the game, please try again".to_string();
+        self.error_message = match e {
+            crate::client::net::error::TcpError::ServerError(err) => Some(err), // Show the server error message as that could be useful
+            _ => Some(hide_bg_issues_msg), // Hide the background issues from the user
+        }
+    }
 }
 
 impl State for CreateOrJoinLobby {}
@@ -112,11 +123,11 @@ impl Update for CreateOrJoinLobby {
                                 )?)));
                             }
                             Err(e) => {
-                                self.error_message = Some(e.to_string());
+                                self.handle_net_error(e);
                             }
                         },
                         Err(e) => {
-                            self.error_message = Some(e.to_string());
+                            self.handle_net_error(e);
                         }
                     },
                     _ => {}
