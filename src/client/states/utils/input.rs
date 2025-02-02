@@ -62,3 +62,108 @@ impl Input {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let input = Input::new();
+        assert_eq!(input.input, String::new());
+        assert_eq!(input.char_index, 0);
+    }
+
+    #[test]
+    fn test_from() {
+        let input = Input::from(String::from("hello"));
+        assert_eq!(input.input, "hello");
+        assert_eq!(input.char_index, 5);
+    }
+
+    #[test]
+    fn test_get_text() {
+        let input = Input::from(String::from("hello"));
+        assert_eq!(input.get_text(), "hello");
+    }
+
+    #[test]
+    fn test_move_left() {
+        let mut input = Input::from(String::from("hello"));
+        input.move_left();
+        assert_eq!(input.char_index, 4);
+        input.move_left();
+        assert_eq!(input.char_index, 3);
+        input.move_left();
+        assert_eq!(input.char_index, 2);
+        input.move_left();
+        assert_eq!(input.char_index, 1);
+        input.move_left();
+        assert_eq!(input.char_index, 0);
+        input.move_left(); // Should not go below 0
+        assert_eq!(input.char_index, 0);
+    }
+
+    #[test]
+    fn test_move_right() {
+        let mut input = Input::from(String::from("hello"));
+        input.move_right();
+        assert_eq!(input.char_index, 5); // Already at the end, should not move
+        input.char_index = 0;
+        input.move_right();
+        assert_eq!(input.char_index, 1);
+        input.move_right();
+        assert_eq!(input.char_index, 2);
+        input.move_right();
+        assert_eq!(input.char_index, 3);
+        input.move_right();
+        assert_eq!(input.char_index, 4);
+        input.move_right();
+        assert_eq!(input.char_index, 5);
+        input.move_right(); // Should not go beyond the length
+        assert_eq!(input.char_index, 5);
+    }
+
+    #[test]
+    fn test_insert_char() {
+        let mut input = Input::from(String::from("hello"));
+        input.char_index = 2;
+        input.insert_char('x');
+        assert_eq!(input.input, "hexllo");
+        assert_eq!(input.char_index, 3);
+    }
+
+    #[test]
+    fn test_insert_clipboard() {
+        let mut input = Input::from(String::from("hello"));
+        input.char_index = 2;
+        input.insert_clipboard(String::from(" world "));
+        assert_eq!(input.input, "heworldllo");
+        assert_eq!(input.char_index, 7);
+    }
+
+    #[test]
+    fn test_delete_char() {
+        let mut input = Input::from(String::from("hello"));
+        input.char_index = 3;
+        input.delete_char();
+        assert_eq!(input.input, "helo");
+        assert_eq!(input.char_index, 2);
+        input.delete_char();
+        assert_eq!(input.input, "hlo");
+        assert_eq!(input.char_index, 1);
+        input.delete_char();
+        assert_eq!(input.input, "lo");
+        assert_eq!(input.char_index, 0);
+        input.delete_char(); // Should not delete if char_index is 0
+        assert_eq!(input.input, "lo");
+        assert_eq!(input.char_index, 0);
+    }
+
+    #[test]
+    fn test_remove_whitespace() {
+        let mut input = Input::from(String::from("hello world"));
+        Input::remove_whitespace(&mut input.input);
+        assert_eq!(input.input, "helloworld");
+    }
+}

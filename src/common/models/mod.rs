@@ -5,7 +5,7 @@ mod game;
 mod game_rooms;
 mod player;
 
-pub use ball::Ball;
+pub use ball::{Ball, Vec2};
 pub use client_input::{
     ClientInput, ClientInputType, ClientInputWithAddr, Direction, JoinGameRequest,
 };

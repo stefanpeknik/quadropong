@@ -1,8 +1,10 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
+    routing::{get, post},
+    Json, Router,
 };
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -120,4 +122,369 @@ pub async fn add_bot(
     game.add_player(player)
         .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)
         .map(|_| Json(player_copy))
+}
+
+// Build the Axum app with routes
+pub fn app(game_rooms: Arc<Mutex<GameRooms>>) -> Router {
+    Router::new()
+        .route("/game/:id", get(get_game_by_id)) // get game by id
+        .route("/game", get(get_games)) // get list of all games
+        .route("/game", post(create_game)) // create a new game
+        .route("/game/:id/join", post(join_game)) // join a game
+        .route("/game/:id/add_bot", post(add_bot)) // add a bot to a game
+        .with_state(game_rooms)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use serde_json::json;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_create_game() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/game")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Game = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(game_rooms.lock().await.lobbies.len(), 1);
+        assert_eq!(game_rooms.lock().await.lobbies[&body.id], body);
+    }
+
+    #[tokio::test]
+    async fn test_get_games() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/game")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Vec<Game> = serde_json::from_slice(&body).unwrap();
+
+        assert!(body.is_empty());
+
+        game_rooms.lock().await.create_game();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/game")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Vec<Game> = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.len(), 1);
+        assert_eq!(
+            body[0],
+            game_rooms
+                .lock()
+                .await
+                .lobbies
+                .values()
+                .next()
+                .unwrap()
+                .clone()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_game_by_id() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let game_id = game_rooms.lock().await.create_game();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(&format!("/game/{}", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Game = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body, game_rooms.lock().await.lobbies[&game_id]);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/game/invalid_id")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let game_id = game_rooms.lock().await.create_game();
+        let random_id = Uuid::new_v4();
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/game/{}", random_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(game_id != random_id);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_join_game() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let game_id = game_rooms.lock().await.create_game();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/join", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "test");
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/join", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "player_2"); // default name because of empty username
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/join", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({}).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "player_3"); // default name because of empty username
+        assert_eq!(body.is_ai, false);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/join", game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "test");
+        assert_eq!(body.is_ai, false);
+
+        let random_game_id = Uuid::new_v4();
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/join", random_game_id))
+                    .header("content-type", "application/json")
+                    .body(json!({ "username": "test" }).to_string().to_string())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_add_bot() {
+        let game_rooms = Arc::new(Mutex::new(GameRooms::new()));
+
+        let game_id = game_rooms.lock().await.create_game();
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "bot_1");
+        assert_eq!(body.is_ai, true);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "bot_2");
+        assert_eq!(body.is_ai, true);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "bot_3");
+        assert_eq!(body.is_ai, true);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Player = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.name, "bot_4");
+        assert_eq!(body.is_ai, true);
+
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let random_game_id = Uuid::new_v4();
+        let response = app(game_rooms.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&format!("/game/{}/add_bot", random_game_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
 }

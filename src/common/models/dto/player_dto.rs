@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::common::{models::player::PlayerPosition, Player};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlayerDto {
     pub id: Uuid,
     pub name: String,

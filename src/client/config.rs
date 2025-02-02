@@ -53,7 +53,7 @@ impl Config {
         ]
     }
 
-    fn get_config_path() -> Option<path::PathBuf> {
+    pub fn get_config_path() -> Option<path::PathBuf> {
         if let Some(mut config_dir) = dirs::config_local_dir() {
             config_dir.push("quadropong");
             fs::create_dir_all(&config_dir).ok()?;

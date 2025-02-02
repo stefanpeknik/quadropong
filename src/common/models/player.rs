@@ -14,7 +14,7 @@ pub enum PlayerPosition {
     Right,
 }
 
-#[derive(Serialize, Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize, PartialEq, Debug)]
 pub struct Player {
     pub id: Uuid,
     pub name: String,
@@ -180,5 +180,32 @@ impl Player {
                 self.move_towards(5.0);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_move_paddle() {
+        let mut player = Player::new("Test".to_string(), false);
+        player.paddle_position = 5.0;
+        player.paddle_delta = 0.5;
+        player.paddle_width = 1.0;
+
+        player.move_paddle(Direction::Positive);
+        assert_eq!(player.paddle_position, 5.5);
+
+        player.move_paddle(Direction::Negative);
+        assert_eq!(player.paddle_position, 5.0);
+
+        player.paddle_position = 0.5;
+        player.move_paddle(Direction::Negative);
+        assert_eq!(player.paddle_position, 0.5);
+
+        player.paddle_position = 9.5;
+        player.move_paddle(Direction::Positive);
+        assert_eq!(player.paddle_position, 9.5);
     }
 }

@@ -1,18 +1,14 @@
-use axum::{
-    routing::{get, post},
-    Router,
-};
+use chrono::Utc;
 use log::{error, info};
-use quadropong::{
-    common::{
-        game_loop::process_input,
-        models::{ClientInput, ClientInputWithAddr},
-        GameRooms,
-    },
-    server::api::{add_bot, create_game, get_game_by_id, get_games, join_game},
+use quadropong::common::{
+    game_loop::process_input,
+    models::{ClientInput, ClientInputWithAddr},
+    GameRooms,
 };
 use std::{collections::VecDeque, env, net::UdpSocket, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time};
+
+use quadropong::server::api::app;
 
 fn setup_logger() -> Result<(), fern::InitError> {
     fern::Dispatch::new()
@@ -25,7 +21,11 @@ fn setup_logger() -> Result<(), fern::InitError> {
             ))
         })
         .level(log::LevelFilter::Debug) // Set global log level
-        .chain(fern::log_file("output.log")?) // Log to file
+        .chain(std::io::stdout()) // Log to stdout
+        .chain(fern::log_file(format!(
+            "{}-quadropong-server.log",
+            Utc::now().format("%Y-%m-%d-%H-%M-%S")
+        ))?) // Log to file
         .apply()?;
     Ok(())
 }
@@ -141,24 +141,15 @@ async fn main() {
         }
     });
 
-    // Build the Axum app with routes
-    let app = Router::new()
-        .route("/game/:id", get(get_game_by_id)) // get game by id
-        .route("/game", get(get_games)) // get list of all games
-        .route("/game", post(create_game)) // create a new game
-        .route("/game/:id/join", post(join_game)) // join a game
-        .route("/game/:id/add_bot", post(add_bot)) // add a bot to a game
-        .with_state(game_rooms);
-
     let listener = tokio::net::TcpListener::bind(addr).await;
 
     match listener {
         Ok(listener) => {
-            info!("Starting server on port {}", port);
-            axum::serve(listener, app).await.unwrap();
+            info!("listening on {}", listener.local_addr().unwrap());
+            axum::serve(listener, app(game_rooms)).await.unwrap();
         }
         Err(e) => {
-            error!("Failed to bind to port {}: {}", port, e);
+            error!("Failed to start listening: {}", e);
         }
     }
 }

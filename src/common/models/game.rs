@@ -30,7 +30,7 @@ pub enum GameState {
     Finished,
 }
 
-#[derive(Serialize, Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize, PartialEq, Debug)]
 pub struct Game {
     pub id: Uuid,
     pub players: HashMap<Uuid, Player>,
@@ -384,5 +384,185 @@ impl Game {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::models::player::Player;
+    use crate::common::models::player::PlayerPosition;
+    use crate::common::models::Vec2;
+
+    #[test]
+    fn test_new() {
+        let game = Game::new();
+        assert_eq!(game.players.len(), 0);
+        assert_eq!(game.state, GameState::WaitingForPlayers);
+        assert_eq!(game.started_at, None);
+        assert_eq!(game.ball.is_some(), true);
+        assert_eq!(game.last_goal_at, None);
+    }
+
+    #[test]
+    fn test_add_player() {
+        let mut game = Game::new();
+        let player = Player::new("Player 1".to_string(), false);
+        game.add_player(player.clone()).unwrap();
+        assert_eq!(game.players.len(), 1);
+        assert_eq!(game.players.get(&player.id).unwrap(), &player);
+    }
+
+    #[test]
+    fn test_add_player_full() {
+        let mut game = Game::new();
+        for _ in 0..MAX_PLAYERS {
+            let player = Player::new("Player".to_string(), false);
+            game.add_player(player).unwrap();
+        }
+        let player = Player::new("Player".to_string(), false);
+        assert!(matches!(game.add_player(player), Err(GameError::GameFull)));
+    }
+
+    #[test]
+    fn test_assign_position() {
+        let mut game = Game::new();
+        let mut player = Player::new("Player 1".to_string(), false);
+        let position = game.assign_position();
+        assert!(position.is_some());
+        player.position = position;
+        game.add_player(player).unwrap();
+        assert!(game.players.values().any(|p| p.position == position));
+    }
+
+    #[test]
+    fn test_remove_player() {
+        let mut game = Game::new();
+        let player = Player::new("Player 1".to_string(), false);
+        game.add_player(player.clone()).unwrap();
+        game.remove_player(player.id);
+        assert_eq!(game.players.len(), 0);
+    }
+
+    #[test]
+    fn test_set_game_state() {
+        let mut game = Game::new();
+        game.set_game_state(GameState::Active);
+        assert_eq!(game.state, GameState::Active);
+    }
+
+    #[test]
+    fn test_is_full() {
+        let mut game = Game::new();
+        for _ in 0..MAX_PLAYERS {
+            let player = Player::new("Player".to_string(), false);
+            game.add_player(player).unwrap();
+        }
+        assert_eq!(game.is_full(), true);
+    }
+
+    #[test]
+    fn test_get_player() {
+        let mut game = Game::new();
+        let player = Player::new("Player 1".to_string(), false);
+        game.add_player(player.clone()).unwrap();
+        assert_eq!(game.get_player(&player.id).unwrap(), &player);
+    }
+
+    #[test]
+    fn test_start_game() {
+        let mut game = Game::new();
+        let player_1 = Player::new("Player 1".to_string(), false);
+        game.add_player(player_1.clone()).unwrap();
+        assert!(matches!(
+            game.start_game(),
+            Err(GameError::InvalidStateTransition)
+        ));
+        game.set_game_state(GameState::WaitingForPlayers);
+        assert!(matches!(
+            game.start_game(),
+            Err(GameError::InvalidStateTransition)
+        ));
+        let player_2 = Player::new("Player 2".to_string(), false);
+        game.add_player(player_2.clone()).unwrap();
+        assert!(matches!(game.start_game(), Err(GameError::PlayersNotReady)));
+        game.get_player_mut(&player_1.id).unwrap().is_ready = true;
+        game.get_player_mut(&player_2.id).unwrap().is_ready = true;
+        assert!(game.start_game().is_ok());
+        assert_eq!(game.state, GameState::Active);
+        assert!(game.started_at.is_some());
+    }
+
+    #[test]
+    fn test_pause_game() {
+        let mut game = Game::new();
+        assert!(matches!(
+            game.pause_game(),
+            Err(GameError::InvalidStateTransition)
+        ));
+        game.set_game_state(GameState::Active);
+        assert!(game.pause_game().is_ok());
+        assert_eq!(game.state, GameState::Paused);
+    }
+
+    #[test]
+    fn test_get_player_by_side() {
+        let mut game = Game::new();
+        let mut player = Player::new("Player 1".to_string(), false);
+        let position = PlayerPosition::Top;
+        player.position = Some(position);
+        game.add_player(player.clone()).unwrap();
+        assert_eq!(game.get_player_by_side(position).unwrap(), &player);
+    }
+
+    #[test]
+    fn test_goal_action() {
+        let mut game = Game::new();
+        game.state = GameState::Active;
+        let mut player = Player::new("Player 1".to_string(), false);
+        let position = PlayerPosition::Top;
+        player.position = Some(position);
+        game.add_player(player.clone()).unwrap();
+
+        if let Some(mut ball) = game.ball.clone() {
+            ball.last_touched_by = Some(player.id);
+            game.ball = Some(ball);
+        } else {
+            panic!("Ball is None");
+        }
+        game.goal_action(position); // same side
+        assert_eq!(game.players.get(&player.id).unwrap().score, 0); // cant score on yourself
+
+        if let Some(mut ball) = game.ball.clone() {
+            ball.last_touched_by = Some(player.id);
+            game.ball = Some(ball);
+        } else {
+            panic!("Ball is None");
+        }
+        game.goal_action(PlayerPosition::Bottom); // opposite side
+        assert_eq!(game.players.get(&player.id).unwrap().score, 1);
+    }
+
+    #[test]
+    fn test_check_players_health() {
+        let mut game = Game::new();
+        let mut player = Player::new("Player 1".to_string(), false);
+        player.ping_timestamp = Some(Utc::now());
+        game.add_player(player.clone()).unwrap();
+        game.check_players_health();
+        assert_eq!(game.players.len(), 1);
+        game.players.get_mut(&player.id).unwrap().ping_timestamp =
+            Some(Utc::now() - chrono::Duration::milliseconds((PING_TIMEOUT * 10) as i64));
+        game.check_players_health();
+        assert_eq!(game.players.len(), 0);
+    }
+
+    #[test]
+    fn test_is_ball_in_safe_zone() {
+        let ball = Ball::new();
+        assert_eq!(Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING), true);
+        let mut ball = Ball::new();
+        ball.position = Vec2 { x: 0.0, y: 0.0 };
+        assert_eq!(Game::is_ball_in_safe_zone(&ball, PADDLE_PADDING), false);
     }
 }
