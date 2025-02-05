@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: rust:bullseye
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Build project
+        run: cargo build --verbose
+
+  lint:
+    runs-on: ubuntu-latest
+    container: rust:bullseye
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+        continue-on-error: true
+
+  test:
+    runs-on: ubuntu-latest
+    container: rust:bullseye
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Run tests
+        run: cargo test --verbose
